@@ -1,0 +1,59 @@
+/* Ministry calendar: clear dates, quiet colour, and tactile feedback. */
+.ministry .month-picker{background:transparent;min-width:150px}
+.ministry .month-picker:hover{background:#edf2ea}
+.ministry-people button:not(.active){opacity:.65}
+.ministry-people button[data-pending=true]{opacity:1;box-shadow:inset 0 0 0 1px #9cb6a2}
+.ministry-day{touch-action:manipulation;transition:background-color .16s ease}
+.ministry-day .ministry-date{color:#627768;font-size:13px}
+.ministry-day .ministry-hours{color:#365e48;font-size:15px;font-weight:750;min-width:27px;border-radius:12px}
+.ministry-day.has-hours .ministry-hours{background:#e9f1e8}
+.ministry-day.is-today .ministry-date{border-color:#62866e;color:#345842;font-weight:700}
+.ministry-weekdays{color:#697f70}
+.ministry-summary button{border-radius:5px;transition:background .15s}
+.ministry-summary button:active{background:#eaf1e8}
+.ministry-hour-choices .ministry-hour-more svg{width:17px;height:17px;vertical-align:middle}
+.ministry-input-error{margin:4px 0 0;color:#9a5749;font-size:13px}
+.ministry-input-error:empty{display:none}
+.ministry-saved-pulse{animation:ministry-saved-pulse .48s cubic-bezier(.2,.7,.2,1)}
+@keyframes ministry-saved-pulse{0%{transform:scale(.85);opacity:.7}45%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
+.ministry-undo-toast{position:fixed;z-index:45;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:20px;padding:10px 12px 10px 16px;border-radius:14px;background:#344d3e;color:#fff;box-shadow:0 8px 28px #243d3038;font-size:13px;line-height:1.4}
+.ministry-undo-toast button{border:0;background:transparent;color:#dcefd9;font:inherit;font-weight:700;padding:8px 4px;white-space:nowrap;cursor:pointer}
+.ministry-undo-toast button:disabled{opacity:.55}
+.ministry-undo-toast button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:360px){.ministry-day .ministry-hours{font-size:14px}.ministry-undo-toast{gap:10px}}
+@media(prefers-reduced-motion:reduce){.ministry-day,.ministry-summary button{transition:none}.ministry-saved-pulse{animation:none}}
+@media(max-width:650px){.ministry-dialog{max-height:100dvh;overflow-y:auto}.ministry-sheet{min-height:0}}
+/* Plans use outlined violet numbers; recorded hours remain filled green. */
+.ministry-day.has-plan .ministry-hours{color:#755b8c;background:transparent;font-weight:800;-webkit-text-stroke:1.1px #755b8c;-webkit-text-fill-color:#f3edf6;paint-order:stroke fill}
+.ministry-day.plan-waiting .ministry-hours{animation:ministry-plan-glow 8s ease-in-out 3s infinite}
+@keyframes ministry-plan-glow{0%,68%,100%{text-shadow:none}78%,88%{text-shadow:0 0 7px #b79bdc,0 0 15px #cdb9e8}83%{text-shadow:0 0 10px #a988c9,0 0 20px #cbb3e6}}
+.ministry-plan-summary{color:#776787!important;font-size:13px}.ministry-plan-summary strong{color:#725d82!important;font-size:14px!important}
+.ministry-sheet-kind{display:block;color:#687e70;font-size:12px;margin-top:2px}.is-planning .ministry-sheet-kind{color:#775c8d}
+.ministry-hour-choices{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 10px;margin:15px auto 0;max-width:330px}
+.ministry-hour-choices button{min-height:54px;font-size:19px;justify-self:center;width:100%;max-width:72px;color:#486a55}
+.ministry-hour-choices button[aria-pressed=true]{background:#52745d;color:#fff}
+.is-planning .ministry-hour-choices button{color:#765b8d}.is-planning .ministry-hour-choices button[aria-pressed=true]{background:#806592;color:#fff}
+.ministry-day-sheet>.ministry-hour-more{display:block;margin:7px auto 0;border:0;background:transparent;color:#718476;font:inherit;font-weight:700;min-width:54px;min-height:44px;cursor:pointer;border-radius:22px}
+.is-planning>.ministry-hour-more{color:#80688d}.ministry-hour-more:focus-visible,.ministry-hour-choices button:focus-visible{outline:2px solid #567661;outline-offset:2px}
+.ministry-current-custom{text-align:center;color:#64796a;margin:8px 0 0;font-size:14px}.ministry-current-custom[hidden],.ministry-day-clear[hidden]{display:none}
+.ministry-day-tools:has(.ministry-day-clear[hidden]){display:none}
+.ministry-day-tools{margin-top:0}.ministry-sheet-error:empty{display:none}.ministry-plan-notice{padding:10px 2px;color:#965e50;font-size:13px}
+@media(max-height:620px){.ministry-hour-choices{margin-top:4px}.ministry-hour-choices button{min-height:44px}.ministry-day-sheet>.ministry-hour-more{margin-top:0}}
+@media(prefers-reduced-motion:reduce){.ministry-day.plan-waiting .ministry-hours{animation:none}}
+/* Keep broad touch targets while drawing a true circle behind the number. */
+.ministry-hour-choices button{position:relative;isolation:isolate;background:transparent!important}
+.ministry-hour-choices button::before{content:"";position:absolute;left:50%;top:50%;width:48px;height:48px;transform:translate(-50%,-50%);border-radius:50%;z-index:-1;background:transparent;transition:background-color .15s ease}
+.ministry-hour-choices button:hover::before{background:#e9f0e8}
+.ministry-hour-choices button[aria-pressed=true]::before{background:#52745d}
+.is-planning .ministry-hour-choices button{color:#6d6176}
+.is-planning .ministry-hour-choices button:hover::before{background:#eeeaf0}
+.is-planning .ministry-hour-choices button[aria-pressed=true]::before{background:#786681}
+.ministry-hour-choices button[aria-pressed=true]{color:#fff}
+.is-planning .ministry-hour-choices button[aria-pressed=true]{color:#fff}
+/* Quieter plum tones distinguish plans while preserving readable contrast. */
+.ministry-day.has-plan .ministry-hours{color:#706479;-webkit-text-stroke-color:#706479;-webkit-text-fill-color:#f2eef4}
+.ministry-plan-summary{color:#756d78!important}.ministry-plan-summary strong{color:#706479!important}
+.is-planning .ministry-sheet-kind,.is-planning>.ministry-hour-more{color:#706479}
+@keyframes ministry-plan-glow{0%,68%,100%{text-shadow:none}78%,88%{text-shadow:0 0 7px #b6a6bf,0 0 15px #d0c4d5}83%{text-shadow:0 0 10px #ae9ab9,0 0 20px #cbbdce}}
+@media(max-width:650px) and (min-height:621px){.ministry-day-sheet{padding-bottom:calc(max(22px,env(safe-area-inset-bottom)) + 32px)}}
+@media(prefers-reduced-motion:reduce){.ministry-hour-choices button::before{transition:none}}

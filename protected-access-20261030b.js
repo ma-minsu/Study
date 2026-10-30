@@ -1,0 +1,12 @@
+// Ask over the home screen; the credential stays in memory for the current page.
+function closeProtectedUnlock(){const dialog=document.querySelector('.protected-dialog');if(dialog){dialog.dataset.routed='true';if(dialog.open)dialog.close();dialog.remove()}}
+function showProtectedUnlock(kind,unlock){
+ const routine=kind==='routine',title=routine?'영적 일과':'봉사 보고',formId=routine?'routine-unlock':'ministry-unlock',inputId=routine?'routine-password':'ministry-password',errorId=routine?'routine-error':'ministry-error';
+ homeView();
+ const dialog=document.createElement('dialog');dialog.className='protected-dialog';dialog.setAttribute('aria-labelledby','protected-dialog-title');dialog.innerHTML=`<form id="${formId}" class="protected-sheet"><div class="protected-sheet-head"><h2 id="protected-dialog-title">${title}</h2><button type="button" class="tool-icon protected-close" aria-label="닫기" title="닫기">${uiIcon('<path d="M18 6 6 18M6 6l12 12"/>')}</button></div><label class="protected-field"><span class="sr-only">비밀번호</span><input id="${inputId}" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호" required autofocus><button type="submit" class="protected-submit" aria-label="열기" title="열기">${UI_CHEVRON_RIGHT}</button></label><p id="${errorId}" class="protected-error" role="status" aria-live="polite"></p></form>`;
+ document.body.append(dialog);const form=dialog.querySelector('form'),input=dialog.querySelector('input'),error=dialog.querySelector('.protected-error'),button=dialog.querySelector('[type="submit"]');let completed=false;
+ dialog.addEventListener('close',()=>{const shouldReturn=!completed&&dialog.dataset.routed!=='true'&&location.hash==='#/'+kind;dialog.remove();if(shouldReturn){location.hash='#/home';requestAnimationFrame(()=>document.querySelector(`.home-category[href="#/${kind}"]`)?.focus())}},{once:true});
+ dialog.querySelector('.protected-close').onclick=()=>dialog.close();input.addEventListener('input',()=>{error.textContent=''});
+ form.onsubmit=async e=>{e.preventDefault();button.disabled=true;input.disabled=true;error.textContent='';try{await unlock(input.value,form);completed=true;if(dialog.open)dialog.close()}catch(err){if(dialog.isConnected){error.textContent=err.message||'연결 상태를 확인해 주세요.';input.disabled=false;input.focus();input.select()}}finally{if(dialog.isConnected){button.disabled=false;input.disabled=false}}};
+ dialog.showModal();
+}

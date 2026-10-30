@@ -1,0 +1,25 @@
+/* Ministry calendar: clear dates, quiet colour, and tactile feedback. */
+.ministry .month-picker{background:transparent;min-width:150px}
+.ministry .month-picker:hover{background:#edf2ea}
+.ministry-people button:not(.active){opacity:.65}
+.ministry-people button[data-pending=true]{opacity:1;box-shadow:inset 0 0 0 1px #9cb6a2}
+.ministry-day{touch-action:manipulation;transition:background-color .16s ease}
+.ministry-day .ministry-date{color:#627768;font-size:13px}
+.ministry-day .ministry-hours{color:#365e48;font-size:15px;font-weight:750;min-width:27px;border-radius:12px}
+.ministry-day.has-hours .ministry-hours{background:#e9f1e8}
+.ministry-day.is-today .ministry-date{border-color:#62866e;color:#345842;font-weight:700}
+.ministry-weekdays{color:#697f70}
+.ministry-summary button{border-radius:5px;transition:background .15s}
+.ministry-summary button:active{background:#eaf1e8}
+.ministry-hour-choices .ministry-hour-more svg{width:17px;height:17px;vertical-align:middle}
+.ministry-input-error{margin:4px 0 0;color:#9a5749;font-size:13px}
+.ministry-input-error:empty{display:none}
+.ministry-saved-pulse{animation:ministry-saved-pulse .48s cubic-bezier(.2,.7,.2,1)}
+@keyframes ministry-saved-pulse{0%{transform:scale(.85);opacity:.7}45%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
+.ministry-undo-toast{position:fixed;z-index:45;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:20px;padding:10px 12px 10px 16px;border-radius:14px;background:#344d3e;color:#fff;box-shadow:0 8px 28px #243d3038;font-size:13px;line-height:1.4}
+.ministry-undo-toast button{border:0;background:transparent;color:#dcefd9;font:inherit;font-weight:700;padding:8px 4px;white-space:nowrap;cursor:pointer}
+.ministry-undo-toast button:disabled{opacity:.55}
+.ministry-undo-toast button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:360px){.ministry-day .ministry-hours{font-size:14px}.ministry-undo-toast{gap:10px}}
+@media(prefers-reduced-motion:reduce){.ministry-day,.ministry-summary button{transition:none}.ministry-saved-pulse{animation:none}}
+@media(max-width:650px){.ministry-dialog{max-height:100dvh;overflow-y:auto}.ministry-sheet{min-height:0}}

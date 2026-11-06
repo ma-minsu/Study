@@ -1,0 +1,13 @@
+input[data-pin-input]{cursor:pointer;caret-color:transparent}
+.pin-pad-dialog{width:min(400px,calc(100vw - 32px));max-width:none;max-height:100dvh;padding:0;border:0;background:transparent;overflow:auto;color:#304b3b}
+.pin-pad-dialog::backdrop{background:#1d2e245e}
+.pin-pad{padding:18px 24px max(24px,env(safe-area-inset-bottom));background:#f9faf6;border-radius:22px;box-shadow:0 12px 40px #1e34242a}
+.pin-pad-head{display:flex;align-items:center;justify-content:space-between}.pin-pad-head h2{margin:0;font-size:18px;letter-spacing:.02em}
+.pin-pad-close,.pin-pad-keys button{border:0;display:grid;place-items:center;background:transparent;color:#4f705b;cursor:pointer}
+.pin-pad-close{width:44px;height:44px;border-radius:50%}.pin-pad-close svg,.pin-pad-delete svg{width:22px;height:22px}
+.pin-pad-dots{display:flex;justify-content:center;gap:16px;padding:12px 0 20px}.pin-pad-dots i{width:12px;height:12px;border:1.5px solid #91aa96;border-radius:50%;background:transparent}.pin-pad-dots i.is-filled{background:#52775d;border-color:#52775d}
+.pin-pad-keys{display:grid;grid-template-columns:repeat(3,1fr);justify-items:center;gap:4px 12px;max-width:300px;margin:auto}.pin-pad-keys button{width:60px;height:56px;border-radius:50%;font:500 23px/1 'Noto Sans KR',sans-serif;font-variant-numeric:tabular-nums}.pin-pad-keys button:active,.pin-pad-close:active{background:#e7f0e6}.pin-pad-keys button:focus-visible,.pin-pad-close:focus-visible{outline:2px solid #52775d;outline-offset:2px}
+@media(max-width:650px){.pin-pad-dialog{position:fixed;inset:auto 0 0;width:100%;margin:0}.pin-pad{border-radius:22px 22px 0 0}}
+.pin-pad-message{min-height:20px;margin:-12px 0 0;text-align:center;color:#9a5749;font-size:13px;line-height:20px}
+.pin-pad-dialog.is-verifying .pin-pad-dots{opacity:.55}
+.pin-pad-dialog.is-verifying .pin-pad-keys{opacity:.55;pointer-events:none}

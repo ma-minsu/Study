@@ -38,3 +38,6 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 .viewer button:disabled{opacity:.3;cursor:default}
 .viewer-image img{user-select:none;-webkit-user-drag:none}
 .viewer-image{position:relative}.viewer-retry{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid #ffffff80;border-radius:24px;background:#253b2ce6;color:#fff;padding:10px 16px;cursor:pointer}.viewer-retry[hidden]{display:none}
+.photo-add small{font-size:11px;color:#71877a;line-height:1.4}.thumbs button{background:#e7ece5;border-radius:5px;overflow:hidden}.viewer-menu button{background:#e7ece5;border-radius:5px;overflow:hidden}img[data-loading=true]{opacity:0}.tile-visual.image-pending,.cover.image-pending,.thumbs button.image-pending,.viewer-menu button.image-pending{background:#e6ebe3}.viewer-image.image-pending{background:radial-gradient(circle at center,#233129 0,#111812 50%)}
+.editor-save.is-pending{animation:editor-saving-glow 1.2s ease-in-out infinite}@keyframes editor-saving-glow{50%{opacity:.5}}@media(prefers-reduced-motion:reduce){.editor-save.is-pending{animation:none}}
+.photo-error{color:#a24b45;font-size:12px;line-height:1.6;margin:8px 0 0}.photo-error:empty{display:none}

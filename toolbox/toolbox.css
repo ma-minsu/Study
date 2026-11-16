@@ -51,3 +51,6 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 
 /* Hold a photo to reorder without opening the browser image menu. */
 .photo-preview{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.photo-preview img{pointer-events:none;-webkit-touch-callout:none}.photo-preview .cover-badge{pointer-events:none}
+
+/* Keep categories on one line and let the photographs start immediately below. */
+.filter-toolbar{align-items:center}.filter-scroll-wrap{position:relative;min-width:0;flex:1 1 0}.filter-toolbar .unified-filters{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;gap:0 16px;padding-right:25px}.filter-toolbar .unified-filters::-webkit-scrollbar{display:none}.filter-toolbar .filter{flex:0 0 auto}.filter-next{position:absolute;right:0;top:0;width:29px;height:46px;padding:0;border:0;background:linear-gradient(to right,rgba(246,247,242,0),var(--bg) 30%);color:#66806d;cursor:pointer;display:grid;place-items:center}.filter-next[hidden]{display:none}.filter-next svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.filter-toolbar .toolbar-actions .icon{width:42px;height:46px}

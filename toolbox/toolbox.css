@@ -29,3 +29,12 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 .tile .tile-title{background:linear-gradient(to bottom,rgba(12,24,15,0) 0%,rgba(12,24,15,.88) 40%,rgba(12,24,15,.95) 100%)}
 .tile.tile-title-below .tile-visual{background:transparent}
 @media(max-width:400px){.tile .tile-title{font-size:17px}.tile.tile-title-below .tile-title{font-size:15px}}
+/* A longer, softer shadow keeps the image visible while supporting the title. */
+.tile-visual::after{content:'';position:absolute;z-index:1;left:0;right:0;bottom:0;height:70%;pointer-events:none;border-radius:0 0 9px 9px;background:linear-gradient(to bottom,rgba(14,27,18,0) 0%,rgba(14,27,18,.60) 40%,rgba(14,27,18,.68) 75%,rgba(14,27,18,.74) 100%)}
+.tile .tile-title{z-index:2;background:none;text-shadow:0 1px 4px #000c}
+.tile .draft-badge{z-index:3}
+.tile.tile-title-below .tile-visual::after{display:none}
+.tile.tile-title-below .tile-title{text-shadow:none}
+.viewer button:disabled{opacity:.3;cursor:default}
+.viewer-image img{user-select:none;-webkit-user-drag:none}
+.viewer-image{position:relative}.viewer-retry{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid #ffffff80;border-radius:24px;background:#253b2ce6;color:#fff;padding:10px 16px;cursor:pointer}.viewer-retry[hidden]{display:none}

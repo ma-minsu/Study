@@ -45,7 +45,9 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 /* Quiet image-led browsing and larger touch targets. */
 .tile-visual::after{height:52%;background:linear-gradient(to bottom,rgba(14,27,18,0),rgba(14,27,18,.18) 38%,rgba(14,27,18,.58) 100%)}
 .tile .tile-title{text-shadow:0 1px 5px #000e,0 1px 2px #000b}
-.tile .tile-summary{display:block;margin:7px 2px 0;color:#64776a;font-size:12px;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
 .viewer-count{display:inline-flex;align-items:center;gap:7px;min-height:48px;cursor:pointer}.viewer-count svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}.viewer-foot .icon{width:64px;height:56px}.viewer-foot .icon svg{width:22px;height:22px}
 .cover .expand{background:#263b30aa;transition:transform .15s}.cover:active .expand{transform:scale(.92)}
-.editor-summary{width:100%;border:0;background:none;padding:7px 0;color:var(--ink);font:inherit;font-size:14px;line-height:1.7}.editor-summary::placeholder{color:#a1aea1}.cover-preview-details{margin-top:15px;font-size:13px;color:#617d68}.cover-preview-details summary{cursor:pointer;width:max-content;padding:5px 0}.cover-preview-slot{width:min(48%,170px);margin-top:9px}.preview-tile{pointer-events:none}.photo-edit.dragging{opacity:.5}.photo-edit.drop-target .photo-preview{outline:3px solid #7b9d80;outline-offset:2px}.photo-preview img{-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.cover-preview-details{margin-top:15px;font-size:13px;color:#617d68}.cover-preview-details summary{cursor:pointer;width:max-content;padding:5px 0}.cover-preview-slot{width:min(48%,170px);margin-top:9px}.preview-tile{pointer-events:none}.photo-edit.dragging{opacity:.5}.photo-edit.drop-target .photo-preview{outline:3px solid #7b9d80;outline-offset:2px}.photo-preview img{-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+
+/* Hold a photo to reorder without opening the browser image menu. */
+.photo-preview{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.photo-preview img{pointer-events:none;-webkit-touch-callout:none}.photo-preview .cover-badge{pointer-events:none}

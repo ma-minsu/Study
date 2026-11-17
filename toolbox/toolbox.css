@@ -102,3 +102,6 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 
 /* Photo position is informational and has no menu. */
 .viewer-count{min-height:0;padding:4px 8px;background:transparent;cursor:default}
+
+/* Keep photo position aligned with the navigation controls. */
+.viewer{grid-template-rows:60px minmax(0,1fr) calc(68px + env(safe-area-inset-bottom,0px))}.viewer-head{justify-content:flex-end}.viewer-foot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 14px env(safe-area-inset-bottom,0px)}.viewer-foot [data-action=left]{justify-self:start}.viewer-foot [data-action=right]{justify-self:end}.viewer-foot .viewer-count{justify-self:center}

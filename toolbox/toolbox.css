@@ -76,3 +76,6 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 .floating-add{border:0;cursor:pointer;color:#fff;background:#506f59;box-shadow:0 4px 16px #344b3a30}.floating-add svg{stroke:currentColor}.category-entry[data-category]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.category-entry.category-dragging{opacity:.7;background:#e4eee3;border-radius:12px;box-shadow:0 5px 16px #344b3a22;transform:scale(1.025);z-index:2}.maintenance{display:flex;flex-direction:column;gap:12px;max-width:360px;margin:15vh auto;padding:0 12px}.maintenance h1{font-size:21px;margin:0 0 12px}.maintenance button{min-height:48px}
 
 .category-grid.admin-order{padding-bottom:80px}
+
+/* Larger floating actions for easier touch. */
+.floating-back{width:62px;height:62px}.floating-back svg{width:27px;height:27px}.detail,.grid{padding-bottom:90px}

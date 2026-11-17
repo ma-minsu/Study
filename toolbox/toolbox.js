@@ -309,25 +309,19 @@ function edit(item){
 }
 function showViewer(item,index){
  viewerItem=item;viewerIndex=Math.max(0,Math.min(item.images.length-1,index));viewerHidden=false;
- const returnFocus=document.activeElement,token=crypto.randomUUID(),el=document.createElement('div');let pickerOpen=false,closed=false,suppressClickUntil=0,viewerHistory=false;
+ const returnFocus=document.activeElement,token=crypto.randomUUID(),el=document.createElement('div');let closed=false,suppressClickUntil=0,viewerHistory=false;
  el.className='viewer';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','사진 보기');document.body.append(el);document.body.style.overflow='hidden';
  try{history.pushState({...history.state,toolboxViewer:token},'',location.href);viewerHistory=true}catch{}
- function cleanup(){if(closed)return;closed=true;lastViewed.set(item.id,viewerIndex);if(pickerOpen&&modal.open)modal.close();el.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);window.removeEventListener('popstate',onHistory);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
+ function cleanup(){if(closed)return;closed=true;lastViewed.set(item.id,viewerIndex);el.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);window.removeEventListener('popstate',onHistory);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
  function close(){if(viewerHistory&&history.state?.toolboxViewer===token){history.back()}else cleanup()}
- function onHistory(e){if(pickerOpen&&!e.state?.toolboxPicker){pickerOpen=false;if(modal.open)modal.close();if(e.state?.toolboxViewer===token)return}if(e.state?.toolboxViewer!==token)cleanup()}
+ function onHistory(e){if(e.state?.toolboxViewer!==token)cleanup()}
  window.addEventListener('popstate',onHistory);
  function prefetch(){for(const i of [viewerIndex-1,viewerIndex+1])if(i>=0&&i<item.images.length&&!closed)preloadImage(item.images[i])}
- function picker(){
-  pickerOpen=true;try{history.pushState({...history.state,toolboxViewer:token,toolboxPicker:true},'',location.href)}catch{}
-  openDialog(`<div class="dialog-head"><h2>사진</h2>${icon('close','닫기')}</div><div class="viewer-menu">${item.images.map((p,i)=>`<button type="button" data-jump="${i}" aria-label="${i+1}번째 사진" ${i===viewerIndex?'aria-current="true"':''}><img data-path="${esc(p)}" alt=""></button>`).join('')}</div>`);
-  fillImages(dialog);dialog.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{viewerIndex=Number(b.dataset.jump);lastViewed.set(item.id,viewerIndex);modal.close();draw()});
-  modal.addEventListener('close',()=>{if(pickerOpen){pickerOpen=false;if(history.state?.toolboxPicker&&history.state?.toolboxViewer===token)history.back()}},{once:true});
- }
  function draw(){
   lastViewed.set(item.id,viewerIndex);el.classList.toggle('hidden-ui',viewerHidden);const multiple=item.images.length>1;
-  el.innerHTML=`<div class="viewer-head"><span></span>${multiple?`<button class="viewer-count" data-count aria-label="${viewerIndex+1} / ${item.images.length}, 사진 목록"><span>${viewerIndex+1} / ${item.images.length}</span><svg class="viewer-count-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>`:'<span></span>'}${icon('close','닫기')}</div><div class="viewer-image"><img data-path="${esc(item.images[viewerIndex])}" data-fallback="사진을 불러오지 못했어요" alt="${esc(item.title)} ${viewerIndex+1}"><button type="button" class="viewer-retry" hidden>다시 시도</button></div><div class="viewer-foot">${multiple?icon('left','이전 사진')+icon('right','다음 사진'):''}</div>`;
+  el.innerHTML=`<div class="viewer-head"><span></span>${multiple?`<span class="viewer-count" aria-label="${viewerIndex+1} / ${item.images.length}번째 사진">${viewerIndex+1} / ${item.images.length}</span>`:'<span></span>'}${icon('close','닫기')}</div><div class="viewer-image"><img data-path="${esc(item.images[viewerIndex])}" data-fallback="사진을 불러오지 못했어요" alt="${esc(item.title)} ${viewerIndex+1}"><button type="button" class="viewer-retry" hidden>다시 시도</button></div><div class="viewer-foot">${multiple?icon('left','이전 사진')+icon('right','다음 사진'):''}</div>`;
   const image=el.querySelector('.viewer-image img'),retry=el.querySelector('.viewer-retry');image.addEventListener('toolbox-image-error',()=>{retry.hidden=false});retry.onclick=e=>{e.stopPropagation();retry.hidden=true;urlCache.delete(image.dataset.path);loadImage(image)};fillImages(el);prefetch();el.querySelector('[data-action=close]').onclick=close;
-  const previous=el.querySelector('[data-action=left]'),next=el.querySelector('[data-action=right]');if(previous&&next){previous.disabled=viewerIndex===0;next.disabled=viewerIndex===item.images.length-1;previous.onclick=()=>{if(viewerIndex>0){viewerIndex--;draw()}};next.onclick=()=>{if(viewerIndex<item.images.length-1){viewerIndex++;draw()}}}el.querySelector('[data-count]')?.addEventListener('click',picker);
+  const previous=el.querySelector('[data-action=left]'),next=el.querySelector('[data-action=right]');if(previous&&next){previous.disabled=viewerIndex===0;next.disabled=viewerIndex===item.images.length-1;previous.onclick=()=>{if(viewerIndex>0){viewerIndex--;draw()}};next.onclick=()=>{if(viewerIndex<item.images.length-1){viewerIndex++;draw()}}}
   const area=el.querySelector('.viewer-image');area.onclick=()=>{if(Date.now()<suppressClickUntil)return;viewerHidden=!viewerHidden;el.classList.toggle('hidden-ui',viewerHidden)};
   area.ontouchstart=e=>{startTouch=e.touches.length===1&&(!window.visualViewport||window.visualViewport.scale<=1.05)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null};
   area.ontouchend=e=>{if(!startTouch||e.changedTouches.length!==1||e.touches.length)return;let dx=e.changedTouches[0].clientX-startTouch.x,dy=e.changedTouches[0].clientY-startTouch.y;startTouch=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){suppressClickUntil=Date.now()+400;const target=Math.max(0,Math.min(item.images.length-1,viewerIndex+(dx<0?1:-1)));if(target!==viewerIndex){viewerIndex=target;draw()}}};

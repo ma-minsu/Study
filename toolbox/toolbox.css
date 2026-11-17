@@ -99,3 +99,6 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 .tile-visual.image-failed::before,.cover.image-failed::after{content:'다시 시도';position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 12px;border-radius:18px;background:#3c5847;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;pointer-events:none}.cover.image-failed .expand,.cover.image-failed .cover-count{opacity:.2}
 @media(prefers-reduced-motion:reduce){.tile-visual.image-pending::before,.cover.image-pending::before{animation:none;background:none}}
 .photo-actions button[data-cover]{min-height:44px;display:inline-flex;align-items:center;padding-block:0}
+
+/* Photo position is informational and has no menu. */
+.viewer-count{min-height:0;padding:4px 8px;background:transparent;cursor:default}

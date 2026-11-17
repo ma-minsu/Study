@@ -314,23 +314,21 @@ function edit(item){
 }
 function showViewer(item,index){
  viewerItem=item;viewerIndex=Math.max(0,Math.min(item.images.length-1,index));viewerHidden=false;
- const returnFocus=document.activeElement,token=crypto.randomUUID(),host=document.createElement('div'),el=document.createElement('div');let closed=false,suppressClickUntil=0,viewerHistory=false,landscapeMode=false,orientationPending=false,fullscreenOwned=false,nativeOrientationLocked=false,fullscreenPromise=null;
+ const returnFocus=document.activeElement,token=crypto.randomUUID(),host=document.createElement('div'),el=document.createElement('div');let closed=false,suppressClickUntil=0,viewerHistory=false,landscapeMode=false,fullscreenOwned=false,fullscreenGuardTimer=null;const openedPortrait=window.innerHeight>=window.innerWidth;
  el.className='viewer';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','사진 보기');host.className='viewer-fullscreen-host';host.append(el);document.body.append(host);document.body.style.overflow='hidden';
  try{history.pushState({...history.state,toolboxViewer:token},'',location.href);viewerHistory=true}catch{}
- function cleanup(){if(closed)return;closed=true;landscapeMode=false;releaseNativeOrientation();exitViewerFullscreen();lastViewed.set(item.id,viewerIndex);host.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',onFullscreenChange);window.removeEventListener('popstate',onHistory);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
+ function cleanup(){if(closed)return;closed=true;landscapeMode=false;stopFullscreenGuard();exitViewerFullscreen();lastViewed.set(item.id,viewerIndex);host.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',onFullscreenChange);window.removeEventListener('popstate',onHistory);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
  function close(){if(viewerHistory&&history.state?.toolboxViewer===token){history.back()}else cleanup()}
  function onHistory(e){if(e.state?.toolboxViewer!==token)cleanup()}
  window.addEventListener('popstate',onHistory);
- function releaseNativeOrientation(){if(nativeOrientationLocked){nativeOrientationLocked=false;try{screen.orientation?.unlock()}catch{}}}
  function exitViewerFullscreen(){if(fullscreenOwned){fullscreenOwned=false;if(document.fullscreenElement===host){try{Promise.resolve(document.exitFullscreen()).catch(()=>{})}catch{}}}}
- function onFullscreenChange(){if(fullscreenOwned&&document.fullscreenElement!==host){fullscreenOwned=false;releaseNativeOrientation()}}
+ function stopFullscreenGuard(){window.removeEventListener('resize',guardFullscreenOrientation);if(fullscreenGuardTimer!==null){clearTimeout(fullscreenGuardTimer);fullscreenGuardTimer=null}}
+ function guardFullscreenOrientation(){if(!closed&&!landscapeMode&&fullscreenOwned&&openedPortrait&&window.innerWidth>window.innerHeight){stopFullscreenGuard();exitViewerFullscreen()}}
+ function onFullscreenChange(){if(fullscreenOwned&&document.fullscreenElement!==host){fullscreenOwned=false;stopFullscreenGuard()}}
  document.addEventListener('fullscreenchange',onFullscreenChange);
- function enterViewerFullscreen(){if(document.fullscreenElement||!host.requestFullscreen||document.fullscreenEnabled===false)return;try{fullscreenPromise=Promise.resolve(host.requestFullscreen()).then(()=>{fullscreenOwned=document.fullscreenElement===host;if(closed)exitViewerFullscreen()}).catch(()=>{}).finally(()=>{fullscreenPromise=null})}catch{}}
- function updateOrientationButton(){el.classList.toggle('landscape-mode',landscapeMode);const button=el.querySelector('[data-action=rotate]');if(button){button.setAttribute('aria-pressed',String(landscapeMode));const label=landscapeMode?'가로 보기 끄기':'가로 보기';button.setAttribute('aria-label',label);button.title=label;button.disabled=orientationPending}}
- async function toggleLandscape(){if(orientationPending||closed)return;if(landscapeMode){landscapeMode=false;releaseNativeOrientation();updateOrientationButton();return}landscapeMode=true;updateOrientationButton();
-  if(!/Android/i.test(navigator.userAgent)||!screen.orientation?.lock)return;
-  orientationPending=true;updateOrientationButton();try{if(fullscreenPromise)await fullscreenPromise;if(closed||!landscapeMode||document.fullscreenElement!==host)return;await screen.orientation.lock('landscape');nativeOrientationLocked=true;if(closed||!landscapeMode||document.fullscreenElement!==host)releaseNativeOrientation()}catch{}finally{orientationPending=false;if(!closed)updateOrientationButton()}
- }
+ function enterViewerFullscreen(){if(document.fullscreenElement||!host.requestFullscreen||document.fullscreenEnabled===false)return;try{Promise.resolve(host.requestFullscreen()).then(()=>{fullscreenOwned=document.fullscreenElement===host;if(closed){exitViewerFullscreen();return}if(fullscreenOwned){window.addEventListener('resize',guardFullscreenOrientation);fullscreenGuardTimer=setTimeout(stopFullscreenGuard,2000);guardFullscreenOrientation()}}).catch(()=>{})}catch{}}
+ function updateOrientationButton(){el.classList.toggle('landscape-mode',landscapeMode);const button=el.querySelector('[data-action=rotate]');if(button){button.setAttribute('aria-pressed',String(landscapeMode));const label=landscapeMode?'가로 보기 끄기':'가로 보기';button.setAttribute('aria-label',label);button.title=label}}
+ function toggleLandscape(){if(closed)return;landscapeMode=!landscapeMode;updateOrientationButton()}
  function prefetch(){for(const i of [viewerIndex-1,viewerIndex+1])if(i>=0&&i<item.images.length&&!closed)preloadImage(item.images[i])}
  function draw(){
   lastViewed.set(item.id,viewerIndex);el.classList.toggle('hidden-ui',viewerHidden);const multiple=item.images.length>1;

@@ -90,3 +90,12 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 @media(prefers-reduced-motion:reduce){.category-entry[data-category]{transition:none}}
 .detail-head h1,.collection-head h1{word-break:keep-all;overflow-wrap:anywhere}.editor-name input::placeholder,.photo-add small{color:#627467}
 @media(max-width:360px){.editor-images{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Keep photo controls readable without squeezing them into narrow columns. */
+@media(max-width:480px){.editor-images{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.photo-actions button[data-cover]{white-space:nowrap;flex:none}.move-actions{flex:none}.move-actions button{min-width:34px;min-height:44px}
+/* Photo placeholders stay in place and reveal a retry only when needed. */
+.tile-visual.image-pending::before,.cover.image-pending::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(105deg,transparent 20%,#ffffff38 48%,transparent 76%);background-size:220% 100%;animation:photo-glimmer 1.7s ease-in-out infinite}
+@keyframes photo-glimmer{from{background-position:120% 0}to{background-position:-120% 0}}
+.tile-visual.image-failed::before,.cover.image-failed::after{content:'다시 시도';position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 12px;border-radius:18px;background:#3c5847;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;pointer-events:none}.cover.image-failed .expand,.cover.image-failed .cover-count{opacity:.2}
+@media(prefers-reduced-motion:reduce){.tile-visual.image-pending::before,.cover.image-pending::before{animation:none;background:none}}
+.photo-actions button[data-cover]{min-height:44px;display:inline-flex;align-items:center;padding-block:0}

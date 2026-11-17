@@ -5,6 +5,7 @@ let managing=false;
 try{managing=sessionStorage.getItem('toolbox-manage-mode')==='1'}catch{}
 // Older bookmarked management links switch into the same per-tab mode.
 const oldManagementURL=new URL(location.href);
+const maintenanceMode=oldManagementURL.searchParams.get('maintenance')==='1';
 if(oldManagementURL.searchParams.get('manage')==='1'){managing=true;try{sessionStorage.setItem('toolbox-manage-mode','1')}catch{}oldManagementURL.searchParams.delete('manage');history.replaceState(history.state,'',oldManagementURL.href)}
 const icons={star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9z"/>',plus:'<path d="M12 4v16M4 12h16"/>',edit:'<path d="M12 20h9M16.5 3.5l4 4L8 20H4v-4z"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',left:'<path d="m15 18-6-6 6-6"/>',right:'<path d="m9 18 6-6-6-6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',share:'<path d="M12 16V3m-5 5 5-5 5 5M5 14v6h14v-6"/>',trash:'<path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13"/>'};
 const icon=(name,label,extra='')=>`<button type="button" class="icon ${extra}" aria-label="${esc(label)}" title="${esc(label)}" data-action="${name}"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]||icons.close}</svg></button>`;
@@ -77,7 +78,7 @@ function listRoute(){
  return null;
 }
 function menuButton(){return `<button type="button" class="icon more-action" data-action="menu" aria-label="설정" title="설정"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>`}
-function render(){if(managing&&!admin){renderManagementGate();return}if(itemId()){gridImageObserver?.disconnect();renderDetail()}else if(listRoute())renderList();else renderHub()}
+function render(){if(managing&&!admin){renderManagementGate();return}if(managing&&admin&&maintenanceMode){renderMaintenance();return}if(itemId()){gridImageObserver?.disconnect();renderDetail()}else if(listRoute())renderList();else renderHub()}
 function renderManagementGate(){gridImageObserver?.disconnect();app.innerHTML='<section class="admin-gate"><h1>봉사 도구함 관리</h1><button type="button" class="primary" data-admin-login>로그인</button><button type="button" class="secondary" data-admin-finish>관리 종료</button></section>';app.querySelector('[data-admin-login]').onclick=login;app.querySelector('[data-admin-finish]').onclick=()=>exitManagement(false)}
 const categoryIcons={
  '전체':'<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
@@ -94,13 +95,40 @@ const categoryIcons={
  '미래와 희망':'<path d="M12 3v3M4.5 9l2.2 1M19.5 9l-2.2 1M4 19h16M7 19a5 5 0 0 1 10 0"/>',
  '동물':'<path d="M8 13c-1.8 0-3 1.5-3 3 0 2 2 2.6 3.5 2 1-.5 2-.8 3.5-.8s2.5.3 3.5.8C17 18.6 19 18 19 16c0-1.5-1.2-3-3-3-1 0-2 .8-4 .8S9 13 8 13Z"/><circle cx="6.5" cy="9" r="1.2"/><circle cx="10" cy="6.5" r="1.2"/><circle cx="14" cy="6.5" r="1.2"/><circle cx="17.5" cy="9" r="1.2"/>'
 };
-function categoryEntry(label,href,index){const tone=label==='전체'?0:label==='즐겨찾기'?1:[...label].reduce((n,c)=>(n*31+c.codePointAt(0))%6,0);const glyph=categoryIcons[label]||'<path d="M4 5.5h6l9 9-5 5-10-9v-5ZM7.5 8.5h.01"/>';return `<a class="category-entry" href="${esc(href)}"><span class="category-mark category-tone-${tone}" aria-hidden="true"><svg viewBox="0 0 24 24">${glyph}</svg></span><span class="category-name">${esc(label)}</span></a>`}
+function categoryEntry(label,href,index){const tone=label==='전체'?0:label==='즐겨찾기'?1:[...label].reduce((n,c)=>(n*31+c.codePointAt(0))%6,0);const glyph=categoryIcons[label]||'<path d="M4 5.5h6l9 9-5 5-10-9v-5ZM7.5 8.5h.01"/>';return `<a class="category-entry" href="${esc(href)}" ${admin&&index>=2?`data-category="${esc(label)}" draggable="true"`:``}><span class="category-mark category-tone-${tone}" aria-hidden="true"><svg viewBox="0 0 24 24">${glyph}</svg></span><span class="category-name">${esc(label)}</span></a>`}
 function floatingBack(href,label){return `<a class="floating-back" href="${esc(href)}" aria-label="${esc(label)}" title="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg></a>`}
 function renderHub(){
  gridImageObserver?.disconnect();const tags=categories();
- app.innerHTML=`${managing?`<div class="hub-utilities"><div class="hub-admin">${menuButton()}</div></div>`:''}<nav class="category-grid" aria-label="자료 분류">${categoryEntry('전체','#/all',0)}${categoryEntry('즐겨찾기','#/favorites',1)}${tags.map((t,i)=>categoryEntry(t,'#/category/'+encodeURIComponent(t),i+2)).join('')}</nav>`;
+ app.innerHTML=`<nav class="category-grid${admin?' admin-order':''}" aria-label="자료 분류">${categoryEntry('전체','#/all',0)}${categoryEntry('즐겨찾기','#/favorites',1)}${tags.map((t,i)=>categoryEntry(t,'#/category/'+encodeURIComponent(t),i+2)).join('')}</nav>${admin?`<button type="button" class="floating-back floating-add" data-hub-add aria-label="자료 추가" title="자료 추가"><svg viewBox="0 0 24 24" aria-hidden="true">${icons.plus}</svg></button>`:''}`;
  app.querySelectorAll('a[href^="#/"]').forEach(a=>a.onclick=()=>{hubScroll=window.scrollY});
- app.querySelector('[data-action="menu"]')?.addEventListener('click',()=>showMenu());
+ app.querySelector('[data-hub-add]')?.addEventListener('click',()=>edit());if(admin)enableCategoryDragging();
+}
+function renderMaintenance(){
+ gridImageObserver?.disconnect();app.innerHTML='<section class="maintenance"><h1>도구함 백업</h1><button type="button" class="secondary" data-backup>백업 내려받기</button><button type="button" class="secondary" data-restore>백업 가져오기</button></section>';
+ app.querySelector('[data-backup]').onclick=e=>downloadToolboxBackup(e.currentTarget);app.querySelector('[data-restore]').onclick=chooseToolboxBackup;
+}
+function enableCategoryDragging(){
+ const grid=app.querySelector('.category-grid');if(!grid)return;let hold=null,drag=null,start=null,suppressUntil=0,savingOrder=false;
+ const entries=()=>[...grid.querySelectorAll('[data-category]')];
+ async function save(before){const order=entries().map(x=>x.dataset.category);if(order.join('\0')===before.join('\0'))return;if(!categoryOrderRecord||savingOrder){renderHub();notify('분류 순서를 불러오지 못했어요.');return}savingOrder=true;
+  const full=[...new Set([...order,...(categoryOrderRecord.tags||[])])];
+  try{const result=await db.from('toolbox_category_order').update({tags:full,updated_at:new Date().toISOString()}).eq('id',true).eq('updated_at',categoryOrderRecord.updated_at).select('tags,updated_at').maybeSingle();if(result.error)throw result.error;if(!result.data)throw Error('다른 기기에서 순서가 바뀌었어요.');categoryOrderRecord=result.data;notify('순서를 바꿨어요')}
+  catch(e){try{await refresh()}catch{}renderHub();notify(e.message||'순서를 저장하지 못했어요.')}finally{savingOrder=false}
+ }
+ function moveTo(target){if(!drag||!target||target===drag||!target.dataset.category)return;const nodes=entries(),from=nodes.indexOf(drag),to=nodes.indexOf(target);if(from<0||to<0)return;grid.insertBefore(drag,from<to?target.nextSibling:target)}
+ grid.addEventListener('click',e=>{if(Date.now()<suppressUntil)e.preventDefault()},true);
+ entries().forEach(el=>{
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('touchstart',e=>{if(e.touches.length!==1||savingOrder)return;const t=e.touches[0];start={x:t.clientX,y:t.clientY,before:entries().map(x=>x.dataset.category)};hold=setTimeout(()=>{if(!start)return;drag=el;drag.classList.add('category-dragging');navigator.vibrate?.(12)},450)},{passive:true});
+  el.addEventListener('touchmove',e=>{if(!start||e.touches.length!==1)return;const t=e.touches[0];if(!drag&&Math.hypot(t.clientX-start.x,t.clientY-start.y)>10){clearTimeout(hold);start=null;return}if(drag){e.preventDefault();moveTo(document.elementFromPoint(t.clientX,t.clientY)?.closest('[data-category]'))}},{passive:false});
+  function finish(cancelled){clearTimeout(hold);if(drag){const before=start?.before||[];drag.classList.remove('category-dragging');drag=null;suppressUntil=Date.now()+600;if(cancelled){renderHub()}else save(before)}start=null}
+  el.addEventListener('touchend',()=>finish(false));el.addEventListener('touchcancel',()=>finish(true));
+  el.addEventListener('dragstart',e=>{if(savingOrder){e.preventDefault();return}start={before:entries().map(x=>x.dataset.category)};drag=el;drag.classList.add('category-dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',el.dataset.category)});
+  el.addEventListener('dragover',e=>{if(drag){e.preventDefault();moveTo(el)}});
+  el.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const before=start.before;drag.classList.remove('category-dragging');drag=null;start=null;suppressUntil=Date.now()+600;save(before)});
+  el.addEventListener('dragend',()=>{if(drag){drag.classList.remove('category-dragging');drag=null;start=null;renderHub()}});
+  el.addEventListener('keydown',e=>{if(!e.altKey||!['ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(e.key)||savingOrder)return;e.preventDefault();const nodes=entries(),i=nodes.indexOf(el),delta=['ArrowUp','ArrowLeft'].includes(e.key)?-1:1,target=nodes[i+delta];if(!target)return;const before=nodes.map(x=>x.dataset.category);drag=el;moveTo(target);drag=null;el.focus();save(before)});
+ });
 }
 function renderList(){
  gridImageObserver?.disconnect();const route=listRoute();if(!route){renderHub();return}filter=route.filter;favoritesOnly=route.favorites;listHash=location.hash;
@@ -117,16 +145,13 @@ function fitTileTitles(root){
  requestAnimationFrame(fit);document.fonts?.ready.then(fit);
 }
 function showMenu(item=null){
- const opts=admin?`<button type="button" data-menu="add">자료 추가</button>${item?'<button type="button" data-menu="edit">자료 수정</button><button type="button" data-menu="move-up">앞으로 이동</button><button type="button" data-menu="move-down">뒤로 이동</button>':''}<button type="button" data-menu="categories">분류 순서</button><button type="button" data-menu="backup">백업 내려받기</button><button type="button" data-menu="restore">백업 가져오기</button><button type="button" data-menu="finish">관리 종료</button><button type="button" data-menu="logout">로그아웃</button>`:'<button type="button" data-menu="login">관리 로그인</button>';
+ const opts=admin?`<button type="button" data-menu="add">자료 추가</button>${item?'<button type="button" data-menu="edit">자료 수정</button><button type="button" data-menu="move-up">앞으로 이동</button><button type="button" data-menu="move-down">뒤로 이동</button>':''}<button type="button" data-menu="finish">관리 종료</button><button type="button" data-menu="logout">로그아웃</button>`:'<button type="button" data-menu="login">관리 로그인</button>';
  openDialog(`<div class="dialog-head"><h2>관리</h2>${icon('close','닫기')}</div><div class="menu-list">${opts}</div>`);
  dialog.querySelector('[data-menu="login"]')?.addEventListener('click',()=>{modal.close();login()});
  dialog.querySelector('[data-menu="add"]')?.addEventListener('click',()=>{modal.close();edit()});
  dialog.querySelector('[data-menu="edit"]')?.addEventListener('click',()=>{modal.close();edit(item)});
  dialog.querySelector('[data-menu="move-up"]')?.addEventListener('click',()=>{modal.close();moveItem(item,-1)});
  dialog.querySelector('[data-menu="move-down"]')?.addEventListener('click',()=>{modal.close();moveItem(item,1)});
- dialog.querySelector('[data-menu="categories"]')?.addEventListener('click',()=>{modal.close();editCategoryOrder()});
- dialog.querySelector('[data-menu="backup"]')?.addEventListener('click',e=>downloadToolboxBackup(e.currentTarget));
- dialog.querySelector('[data-menu="restore"]')?.addEventListener('click',()=>chooseToolboxBackup());
  dialog.querySelector('[data-menu="finish"]')?.addEventListener('click',()=>exitManagement(false));
  dialog.querySelector('[data-menu="logout"]')?.addEventListener('click',()=>exitManagement(true));
 }

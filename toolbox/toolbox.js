@@ -1,7 +1,11 @@
 'use strict';
 const db=supabase.createClient('https://jvfumjoagmmzlcarlurd.supabase.co','sb_publishable_615Ta0jNV-LhuiBin0_6gg_I93oTBkH',{auth:{storageKey:'ministry-toolbox-auth'}});
 const app=document.querySelector('#app'), modal=document.querySelector('#modal'), dialog=document.querySelector('#dialog-content');
-const managing=new URLSearchParams(location.search).get('manage')==='1';
+let managing=false;
+try{managing=sessionStorage.getItem('toolbox-manage-mode')==='1'}catch{}
+// Older bookmarked management links switch into the same per-tab mode.
+const oldManagementURL=new URL(location.href);
+if(oldManagementURL.searchParams.get('manage')==='1'){managing=true;try{sessionStorage.setItem('toolbox-manage-mode','1')}catch{}oldManagementURL.searchParams.delete('manage');history.replaceState(history.state,'',oldManagementURL.href)}
 const icons={star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9z"/>',plus:'<path d="M12 4v16M4 12h16"/>',edit:'<path d="M12 20h9M16.5 3.5l4 4L8 20H4v-4z"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',left:'<path d="m15 18-6-6 6-6"/>',right:'<path d="m9 18 6-6-6-6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',share:'<path d="M12 16V3m-5 5 5-5 5 5M5 14v6h14v-6"/>',trash:'<path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13"/>'};
 const icon=(name,label,extra='')=>`<button type="button" class="icon ${extra}" aria-label="${esc(label)}" title="${esc(label)}" data-action="${name}"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]||icons.close}</svg></button>`;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -69,7 +73,7 @@ function listRoute(){
 }
 function menuButton(){return `<button type="button" class="icon more-action" data-action="menu" aria-label="설정" title="설정"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>`}
 function render(){if(managing&&!admin){renderManagementGate();return}if(itemId()){gridImageObserver?.disconnect();renderDetail()}else if(listRoute())renderList();else renderHub()}
-function renderManagementGate(){gridImageObserver?.disconnect();app.innerHTML='<section class="admin-gate"><h1>봉사 도구함 관리</h1><button type="button" class="primary" data-admin-login>로그인</button></section>';app.querySelector('[data-admin-login]').onclick=login}
+function renderManagementGate(){gridImageObserver?.disconnect();app.innerHTML='<section class="admin-gate"><h1>봉사 도구함 관리</h1><button type="button" class="primary" data-admin-login>로그인</button><button type="button" class="secondary" data-admin-finish>관리 종료</button></section>';app.querySelector('[data-admin-login]').onclick=login;app.querySelector('[data-admin-finish]').onclick=()=>exitManagement(false)}
 const categoryIcons={
  '전체':'<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
  '즐겨찾기':icons.star,
@@ -108,7 +112,7 @@ function fitTileTitles(root){
  requestAnimationFrame(fit);document.fonts?.ready.then(fit);
 }
 function showMenu(item=null){
- const opts=admin?`<button type="button" data-menu="add">자료 추가</button>${item?'<button type="button" data-menu="edit">자료 수정</button><button type="button" data-menu="move-up">앞으로 이동</button><button type="button" data-menu="move-down">뒤로 이동</button>':''}<button type="button" data-menu="categories">분류 순서</button><button type="button" data-menu="logout">로그아웃</button>`:'<button type="button" data-menu="login">관리 로그인</button>';
+ const opts=admin?`<button type="button" data-menu="add">자료 추가</button>${item?'<button type="button" data-menu="edit">자료 수정</button><button type="button" data-menu="move-up">앞으로 이동</button><button type="button" data-menu="move-down">뒤로 이동</button>':''}<button type="button" data-menu="categories">분류 순서</button><button type="button" data-menu="finish">관리 종료</button><button type="button" data-menu="logout">로그아웃</button>`:'<button type="button" data-menu="login">관리 로그인</button>';
  openDialog(`<div class="dialog-head"><h2>관리</h2>${icon('close','닫기')}</div><div class="menu-list">${opts}</div>`);
  dialog.querySelector('[data-menu="login"]')?.addEventListener('click',()=>{modal.close();login()});
  dialog.querySelector('[data-menu="add"]')?.addEventListener('click',()=>{modal.close();edit()});
@@ -116,7 +120,11 @@ function showMenu(item=null){
  dialog.querySelector('[data-menu="move-up"]')?.addEventListener('click',()=>{modal.close();moveItem(item,-1)});
  dialog.querySelector('[data-menu="move-down"]')?.addEventListener('click',()=>{modal.close();moveItem(item,1)});
  dialog.querySelector('[data-menu="categories"]')?.addEventListener('click',()=>{modal.close();editCategoryOrder()});
- dialog.querySelector('[data-menu="logout"]')?.addEventListener('click',async()=>{await db.auth.signOut();await checkAdmin();await refresh();modal.close();render()});
+ dialog.querySelector('[data-menu="finish"]')?.addEventListener('click',()=>exitManagement(false));
+ dialog.querySelector('[data-menu="logout"]')?.addEventListener('click',()=>exitManagement(true));
+}
+async function exitManagement(signOut){
+ try{if(signOut)await db.auth.signOut();managing=false;admin=false;session=null;try{sessionStorage.removeItem('toolbox-manage-mode')}catch{}await refresh();modal.close();if(location.hash!=='#/'){location.hash='#/'}else render()}catch{notify('변경하지 못했어요. 다시 시도해 주세요.')}
 }
 async function moveItem(x,step){
  if(!admin||!x)return;const index=items.findIndex(i=>i.id===x.id),target=index+step;if(index<0||target<0||target>=items.length)return;

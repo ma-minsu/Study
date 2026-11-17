@@ -105,3 +105,9 @@ dialog.editor-dialog{width:min(100%,720px);height:100dvh;max-height:100dvh;max-w
 
 /* Keep photo position aligned with the navigation controls. */
 .viewer{grid-template-rows:60px minmax(0,1fr) calc(68px + env(safe-area-inset-bottom,0px))}.viewer-head{justify-content:flex-end}.viewer-foot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 14px env(safe-area-inset-bottom,0px)}.viewer-foot [data-action=left]{justify-self:start}.viewer-foot [data-action=right]{justify-self:end}.viewer-foot .viewer-count{justify-self:center}
+
+/* Match collection and detail headers, and let photos keep their own proportions. */
+.collection-head,.detail-head{min-height:61px;border-bottom-color:#e9eee7}.collection-actions{min-height:48px}
+.cover{display:block;width:fit-content;max-width:100%;height:auto;max-height:none;aspect-ratio:auto;margin:0 auto;background:transparent;line-height:0}.cover img{display:block;width:auto;height:auto;min-height:0;max-width:100%;max-height:55vh;object-fit:contain}.cover[aria-busy="true"],.cover.image-failed{width:100%;aspect-ratio:16/10;max-height:55vh;background:#e4e9e1}.cover[aria-busy="true"] img,.cover.image-failed img{width:100%;height:100%;min-height:0;max-height:55vh}.cover:active img{opacity:.92}
+
+.cover[aria-busy="true"]{width:min(100%,var(--cover-bound,100%),var(--cover-native,100%));aspect-ratio:var(--cover-ratio,16/10)}

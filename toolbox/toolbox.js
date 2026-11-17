@@ -7,7 +7,7 @@ try{managing=sessionStorage.getItem('toolbox-manage-mode')==='1'}catch{}
 const oldManagementURL=new URL(location.href);
 const maintenanceMode=oldManagementURL.searchParams.get('maintenance')==='1';
 if(oldManagementURL.searchParams.get('manage')==='1'){managing=true;try{sessionStorage.setItem('toolbox-manage-mode','1')}catch{}oldManagementURL.searchParams.delete('manage');history.replaceState(history.state,'',oldManagementURL.href)}
-const icons={star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9z"/>',plus:'<path d="M12 4v16M4 12h16"/>',edit:'<path d="M12 20h9M16.5 3.5l4 4L8 20H4v-4z"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',left:'<path d="m15 18-6-6 6-6"/>',right:'<path d="m9 18 6-6-6-6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',share:'<path d="M12 16V3m-5 5 5-5 5 5M5 14v6h14v-6"/>',trash:'<path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13"/>',rotate:'<rect x="5" y="8" width="14" height="9" rx="1.5"/><path d="M5 5a8 8 0 0 1 12-1M17 2v3h-3M19 19a8 8 0 0 1-12 1M7 22v-3h3"/>'};
+const icons={star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9z"/>',plus:'<path d="M12 4v16M4 12h16"/>',edit:'<path d="M12 20h9M16.5 3.5l4 4L8 20H4v-4z"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',left:'<path d="m15 18-6-6 6-6"/>',right:'<path d="m9 18 6-6-6-6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',share:'<path d="M12 16V3m-5 5 5-5 5 5M5 14v6h14v-6"/>',trash:'<path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13"/>',rotate:'<rect x="8" y="3" width="8" height="13" rx="1.5" transform="rotate(35 12 9.5)"/><path d="M4 16a9 9 0 0 0 15 2M19 21v-4h-4"/>'};
 const icon=(name,label,extra='')=>`<button type="button" class="icon ${extra}" aria-label="${esc(label)}" title="${esc(label)}" data-action="${name}"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]||icons.close}</svg></button>`;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let items=[],admin=false,session=null,filter='전체',favoritesOnly=false,categoryOrderRecord=null,savedScroll=0,viewerIndex=0,viewerItem=null,viewerHidden=false,startTouch=null;
@@ -314,20 +314,22 @@ function edit(item){
 }
 function showViewer(item,index){
  viewerItem=item;viewerIndex=Math.max(0,Math.min(item.images.length-1,index));viewerHidden=false;
- const returnFocus=document.activeElement,token=crypto.randomUUID(),el=document.createElement('div');let closed=false,suppressClickUntil=0,viewerHistory=false,landscapeMode=false,orientationPending=false,fullscreenOwned=false,nativeOrientationLocked=false;
- el.className='viewer';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','사진 보기');document.body.append(el);document.body.style.overflow='hidden';
+ const returnFocus=document.activeElement,token=crypto.randomUUID(),host=document.createElement('div'),el=document.createElement('div');let closed=false,suppressClickUntil=0,viewerHistory=false,landscapeMode=false,orientationPending=false,fullscreenOwned=false,nativeOrientationLocked=false,fullscreenPromise=null;
+ el.className='viewer';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','사진 보기');host.className='viewer-fullscreen-host';host.append(el);document.body.append(host);document.body.style.overflow='hidden';
  try{history.pushState({...history.state,toolboxViewer:token},'',location.href);viewerHistory=true}catch{}
- function cleanup(){if(closed)return;closed=true;landscapeMode=false;releaseNativeOrientation();lastViewed.set(item.id,viewerIndex);el.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',onFullscreenChange);window.removeEventListener('popstate',onHistory);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
+ function cleanup(){if(closed)return;closed=true;landscapeMode=false;releaseNativeOrientation();exitViewerFullscreen();lastViewed.set(item.id,viewerIndex);host.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',onFullscreenChange);window.removeEventListener('popstate',onHistory);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
  function close(){if(viewerHistory&&history.state?.toolboxViewer===token){history.back()}else cleanup()}
  function onHistory(e){if(e.state?.toolboxViewer!==token)cleanup()}
  window.addEventListener('popstate',onHistory);
- function releaseNativeOrientation(){if(nativeOrientationLocked){nativeOrientationLocked=false;try{screen.orientation?.unlock()}catch{}}if(fullscreenOwned){fullscreenOwned=false;if(document.fullscreenElement===el){try{Promise.resolve(document.exitFullscreen()).catch(()=>{})}catch{}}}}
- function onFullscreenChange(){if(fullscreenOwned&&document.fullscreenElement!==el){fullscreenOwned=false;if(nativeOrientationLocked){nativeOrientationLocked=false;try{screen.orientation?.unlock()}catch{}}}}
+ function releaseNativeOrientation(){if(nativeOrientationLocked){nativeOrientationLocked=false;try{screen.orientation?.unlock()}catch{}}}
+ function exitViewerFullscreen(){if(fullscreenOwned){fullscreenOwned=false;if(document.fullscreenElement===host){try{Promise.resolve(document.exitFullscreen()).catch(()=>{})}catch{}}}}
+ function onFullscreenChange(){if(fullscreenOwned&&document.fullscreenElement!==host){fullscreenOwned=false;releaseNativeOrientation()}}
  document.addEventListener('fullscreenchange',onFullscreenChange);
+ function enterViewerFullscreen(){if(document.fullscreenElement||!host.requestFullscreen||document.fullscreenEnabled===false)return;try{fullscreenPromise=Promise.resolve(host.requestFullscreen()).then(()=>{fullscreenOwned=document.fullscreenElement===host;if(closed)exitViewerFullscreen()}).catch(()=>{}).finally(()=>{fullscreenPromise=null})}catch{}}
  function updateOrientationButton(){el.classList.toggle('landscape-mode',landscapeMode);const button=el.querySelector('[data-action=rotate]');if(button){button.setAttribute('aria-pressed',String(landscapeMode));const label=landscapeMode?'가로 보기 끄기':'가로 보기';button.setAttribute('aria-label',label);button.title=label;button.disabled=orientationPending}}
  async function toggleLandscape(){if(orientationPending||closed)return;if(landscapeMode){landscapeMode=false;releaseNativeOrientation();updateOrientationButton();return}landscapeMode=true;updateOrientationButton();
-  if(!/Android/i.test(navigator.userAgent)||document.fullscreenElement||!el.requestFullscreen||!screen.orientation?.lock||document.fullscreenEnabled===false)return;
-  orientationPending=true;updateOrientationButton();try{await el.requestFullscreen();fullscreenOwned=document.fullscreenElement===el;if(closed||!landscapeMode){releaseNativeOrientation();return}if(!fullscreenOwned)return;try{await screen.orientation.lock('landscape');nativeOrientationLocked=true;if(closed||!landscapeMode||document.fullscreenElement!==el)releaseNativeOrientation()}catch{if(fullscreenOwned&&document.fullscreenElement===el){try{await document.exitFullscreen();fullscreenOwned=false}catch{fullscreenOwned=document.fullscreenElement===el}}}}catch{}finally{orientationPending=false;if(!closed)updateOrientationButton()}
+  if(!/Android/i.test(navigator.userAgent)||!screen.orientation?.lock)return;
+  orientationPending=true;updateOrientationButton();try{if(fullscreenPromise)await fullscreenPromise;if(closed||!landscapeMode||document.fullscreenElement!==host)return;await screen.orientation.lock('landscape');nativeOrientationLocked=true;if(closed||!landscapeMode||document.fullscreenElement!==host)releaseNativeOrientation()}catch{}finally{orientationPending=false;if(!closed)updateOrientationButton()}
  }
  function prefetch(){for(const i of [viewerIndex-1,viewerIndex+1])if(i>=0&&i<item.images.length&&!closed)preloadImage(item.images[i])}
  function draw(){
@@ -340,7 +342,7 @@ function showViewer(item,index){
   area.ontouchend=e=>{if(!startTouch||e.changedTouches.length!==1||e.touches.length)return;const rawX=e.changedTouches[0].clientX-startTouch.x,rawY=e.changedTouches[0].clientY-startTouch.y,rotated=getComputedStyle(el).getPropertyValue('--manual-landscape').trim()==='1';let dx=rotated?rawY:rawX,dy=rotated?-rawX:rawY;startTouch=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){suppressClickUntil=Date.now()+400;const target=Math.max(0,Math.min(item.images.length-1,viewerIndex+(dx<0?1:-1)));if(target!==viewerIndex){viewerIndex=target;draw()}}};
  }
  function key(e){if(modal.open)return;if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='ArrowRight'&&viewerIndex<item.images.length-1){viewerIndex++;draw()}if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;draw()}}
- document.addEventListener('keydown',key);draw();el.querySelector('[data-action=close]').focus({preventScroll:true});
+ document.addEventListener('keydown',key);draw();el.querySelector('[data-action=close]').focus({preventScroll:true});enterViewerFullscreen();
 }
 modal.addEventListener('close',()=>scheduleThumbnailBackfill());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleThumbnailBackfill()});

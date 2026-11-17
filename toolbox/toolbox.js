@@ -32,8 +32,8 @@ async function primeSigned(paths){
  });
  await Promise.allSettled(jobs);
 }
-function imagePending(img,pending){if(pending)img.dataset.loading='true';else delete img.dataset.loading;img.parentElement?.classList.toggle('image-pending',pending)}
-function imageFailed(img){if(!img.isConnected)return;imagePending(img,false);img.alt=img.dataset.fallback||'이미지를 불러오지 못했습니다.';img.dispatchEvent(new Event('toolbox-image-error'))}
+function imagePending(img,pending){if(pending)img.dataset.loading='true';else delete img.dataset.loading;img.parentElement?.classList.toggle('image-pending',pending);if(pending)img.parentElement?.classList.remove('image-failed')}
+function imageFailed(img){if(!img.isConnected)return;imagePending(img,false);img.parentElement?.classList.add('image-failed');img.alt=img.dataset.fallback||'이미지를 불러오지 못했습니다.';img.dispatchEvent(new Event('toolbox-image-error'))}
 async function loadImage(img){
  if(!img.isConnected)return;imagePending(img,true);
  try{const url=await signed(img.dataset.path);if(img.isConnected){img.onload=()=>imagePending(img,false);img.onerror=()=>imageFailed(img);img.src=url}}catch{imageFailed(img)}
@@ -52,7 +52,7 @@ async function fillImages(root=document){
 async function refresh(){const [list,ordering]=await Promise.all([db.from('toolbox_items').select('*').order('sort_order').order('created_at'),db.from('toolbox_category_order').select('tags,updated_at').eq('id',true).maybeSingle()]);if(list.error)throw list.error;items=list.data||[];categoryOrderRecord=ordering.error?null:ordering.data}
 async function checkAdmin(){const {data}=await db.auth.getSession();session=data.session;if(!session){admin=false;return}const result=await db.from('toolbox_admins').select('user_id').eq('user_id',session.user.id).maybeSingle();admin=!!result.data&&!result.error}
 const ageTags=['어린이','청소년','청년','중장년','어르신'];
-const defaultCategories=['청소년','청년','중장년','어르신','어린이','창조와 자연','가족','행복','미래와 희망'];
+const defaultCategories=['어린이','청소년','청년','중장년','어르신','창조와 자연','가족','행복','미래와 희망'];
 function categories(){
  const used=new Set(items.filter(x=>x.published||admin).flatMap(x=>x.tags||[]));
  if(used.has('모든 연령'))ageTags.forEach(t=>used.add(t));used.delete('모든 연령');
@@ -73,9 +73,9 @@ const categoryIcons={
  '즐겨찾기':icons.star,
  '어린이':'<path d="M12 3 5 10l7 7 7-7-7-7ZM12 17v1c0 2 2 2 2 3"/><path d="m8 8 8 4"/>',
  '청소년':'<path d="M5 10 12 6l7 4-7 4-7-4ZM8 12v4c2.5 2 5.5 2 8 0v-4M19 10v5"/>',
- '청년':'<path d="M4 18h16M6 18a6 6 0 0 1 12 0M12 3v3M4.5 9l2 2M19.5 9l-2 2"/>',
+ '청년':'<circle cx="12" cy="7" r="3"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/>',
  '중장년':'<path d="M12 20v-8M7 20h10M12 13c-4-1-5-4-5-7 3 0 5 2 5 5 0-3 2-5 5-5 0 3-1 6-5 7Z"/>',
- '어르신':'<path d="M12 20v-8M7 20h10M12 13C6 12 5 9 7 6c2 0 4 1 5 3 1-2 3-3 5-3 2 3 1 6-5 7Z"/>',
+ '어르신':'<path d="M12 20v-7M8 20h8M12 4c-3-2-6 .5-5 3-3 1-3 5 0 6 1.5 2 3.5 2 5 .5 1.5 1.5 3.5 1.5 5-.5 3-1 3-5 0-6 1-2.5-2-5-5-3Z"/>',
  '창조와 자연':'<path d="M19.5 4.5C11 4 5 7 5 13a5 5 0 0 0 5 5c6 0 9-6 9.5-13.5ZM4 20c3-4 6-7 11-10"/>',
  '자연':'<path d="M19.5 4.5C11 4 5 7 5 13a5 5 0 0 0 5 5c6 0 9-6 9.5-13.5ZM4 20c3-4 6-7 11-10"/>',
  '가족':'<path d="m3.5 11 8.5-7 8.5 7M6.5 10v9.5h11V10M10 19.5v-5h4v5"/>',
@@ -83,37 +83,48 @@ const categoryIcons={
  '미래와 희망':'<path d="M12 3v3M4.5 9l2.2 1M19.5 9l-2.2 1M4 19h16M7 19a5 5 0 0 1 10 0"/>',
  '동물':'<path d="M8 13c-1.8 0-3 1.5-3 3 0 2 2 2.6 3.5 2 1-.5 2-.8 3.5-.8s2.5.3 3.5.8C17 18.6 19 18 19 16c0-1.5-1.2-3-3-3-1 0-2 .8-4 .8S9 13 8 13Z"/><circle cx="6.5" cy="9" r="1.2"/><circle cx="10" cy="6.5" r="1.2"/><circle cx="14" cy="6.5" r="1.2"/><circle cx="17.5" cy="9" r="1.2"/>'
 };
-function categoryEntry(label,href,index){const glyph=categoryIcons[label]||'<path d="M4 5.5h6l9 9-5 5-10-9v-5ZM7.5 8.5h.01"/>';return `<a class="category-entry" href="${esc(href)}"><span class="category-mark category-tone-${index%6}" aria-hidden="true"><svg viewBox="0 0 24 24">${glyph}</svg></span><span class="category-name">${esc(label)}</span></a>`}
+function categoryEntry(label,href,index){const tone=label==='전체'?0:label==='즐겨찾기'?1:[...label].reduce((n,c)=>(n*31+c.codePointAt(0))%6,0);const glyph=categoryIcons[label]||'<path d="M4 5.5h6l9 9-5 5-10-9v-5ZM7.5 8.5h.01"/>';return `<a class="category-entry" href="${esc(href)}"><span class="category-mark category-tone-${tone}" aria-hidden="true"><svg viewBox="0 0 24 24">${glyph}</svg></span><span class="category-name">${esc(label)}</span></a>`}
 function floatingBack(href,label){return `<a class="floating-back" href="${esc(href)}" aria-label="${esc(label)}" title="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg></a>`}
 function renderHub(){
  gridImageObserver?.disconnect();const tags=categories();
- app.innerHTML=`<div class="hub-utilities"><div class="hub-admin">${admin?icon('plus','자료 추가'):''}${menuButton()}</div></div><nav class="category-grid" aria-label="자료 분류">${categoryEntry('전체','#/all',0)}${categoryEntry('즐겨찾기','#/favorites',1)}${tags.map((t,i)=>categoryEntry(t,'#/category/'+encodeURIComponent(t),i+2)).join('')}</nav>`;
+ app.innerHTML=`<div class="hub-utilities"><div class="hub-admin">${menuButton()}</div></div><nav class="category-grid" aria-label="자료 분류">${categoryEntry('전체','#/all',0)}${categoryEntry('즐겨찾기','#/favorites',1)}${tags.map((t,i)=>categoryEntry(t,'#/category/'+encodeURIComponent(t),i+2)).join('')}</nav>`;
  app.querySelectorAll('a[href^="#/"]').forEach(a=>a.onclick=()=>{hubScroll=window.scrollY});
- app.querySelector('[data-action="menu"]').onclick=showMenu;app.querySelector('[data-action="plus"]')?.addEventListener('click',()=>edit());
+ app.querySelector('[data-action="menu"]').onclick=()=>showMenu();
 }
 function renderList(){
  gridImageObserver?.disconnect();const route=listRoute();if(!route){renderHub();return}filter=route.filter;favoritesOnly=route.favorites;listHash=location.hash;
  let shown=items.filter(x=>(!favoritesOnly||stars.includes(x.id))&&(filter==='전체'||(x.tags||[]).includes(filter)||(ageTags.includes(filter)&&(x.tags||[]).includes('모든 연령'))));
  if(ageTags.includes(filter))shown.sort((a,b)=>Number(!(a.tags||[]).includes(filter))-Number(!(b.tags||[]).includes(filter)));
  const heading=favoritesOnly?'즐겨찾기':filter;
- app.innerHTML=`<div class="collection-head"><h1>${esc(heading)}</h1><div class="collection-actions">${admin?icon('plus','자료 추가'):''}${menuButton()}</div></div><section class="grid" aria-label="자료">${shown.map(x=>`<a class="tile" href="#/${x.id}" data-item="${x.id}"><div class="tile-visual">${x.cover||x.images?.[0]?`<img data-path="${esc(x.cover||x.images[0])}" data-fallback="${esc(x.title)}" alt="" loading="lazy">`:'<div class="placeholder"></div>'}<span class="tile-title">${esc(x.title)}</span>${!x.published?'<small class="draft-badge">비공개</small>':''}</div></a>`).join('')}</section>${!shown.length?`<div class="empty">${favoritesOnly?'즐겨찾기 없음':'자료 없음'}${favoritesOnly||filter!=='전체'?'<a class="empty-reset" href="#/all">전체 보기</a>':''}</div>`:''}${floatingBack('#/','분류로 돌아가기')}`;
+ app.innerHTML=`<div class="collection-head"><h1>${esc(heading)}</h1><div class="collection-actions"></div></div><section class="grid" aria-label="자료">${shown.map(x=>`<a class="tile" href="#/${x.id}" data-item="${x.id}"><div class="tile-visual">${x.cover||x.images?.[0]?`<img data-path="${esc(x.cover||x.images[0])}" data-fallback="${esc(x.title)}" alt="" loading="lazy">`:'<div class="placeholder"></div>'}<span class="tile-title">${esc(x.title)}</span>${!x.published?'<small class="draft-badge">비공개</small>':''}</div></a>`).join('')}</section>${!shown.length?`<div class="empty">${favoritesOnly?'즐겨찾기 없음':'자료 없음'}${favoritesOnly||filter!=='전체'?'<a class="empty-reset" href="#/all">전체 보기</a>':''}</div>`:''}${floatingBack('#/','분류로 돌아가기')}`;
  fillImages(app);fitTileTitles(app);app.querySelectorAll('[data-item]').forEach(a=>a.onclick=()=>{savedScroll=window.scrollY});
- app.querySelector('[data-action="menu"]').onclick=showMenu;app.querySelector('[data-action="plus"]')?.addEventListener('click',()=>edit());
 }
+
 function fitTileTitles(root){
  const tiles=[...root.querySelectorAll('.tile')];
  function fit(){if(!root.isConnected)return;for(const tile of tiles){tile.classList.remove('tile-title-below');const title=tile.querySelector('.tile-title'),visual=tile.querySelector('img,.placeholder');if(title&&visual&&title.scrollHeight>visual.clientHeight*.55)tile.classList.add('tile-title-below')}}
  requestAnimationFrame(fit);document.fonts?.ready.then(fit);
 }
-function showMenu(){
- openDialog(`<div class="dialog-head"><h2>설정</h2>${icon('close','닫기')}</div><div class="menu-list">${admin?'<button type="button" data-menu="categories">분류 순서</button><button type="button" data-menu="logout">로그아웃</button>':'<button type="button" data-menu="login">관리 로그인</button>'}</div>`);
+function showMenu(item=null){
+ const opts=admin?`<button type="button" data-menu="add">자료 추가</button>${item?'<button type="button" data-menu="edit">자료 수정</button><button type="button" data-menu="move-up">앞으로 이동</button><button type="button" data-menu="move-down">뒤로 이동</button>':''}<button type="button" data-menu="categories">분류 순서</button><button type="button" data-menu="logout">로그아웃</button>`:'<button type="button" data-menu="login">관리 로그인</button>';
+ openDialog(`<div class="dialog-head"><h2>관리</h2>${icon('close','닫기')}</div><div class="menu-list">${opts}</div>`);
  dialog.querySelector('[data-menu="login"]')?.addEventListener('click',()=>{modal.close();login()});
+ dialog.querySelector('[data-menu="add"]')?.addEventListener('click',()=>{modal.close();edit()});
+ dialog.querySelector('[data-menu="edit"]')?.addEventListener('click',()=>{modal.close();edit(item)});
+ dialog.querySelector('[data-menu="move-up"]')?.addEventListener('click',()=>{modal.close();moveItem(item,-1)});
+ dialog.querySelector('[data-menu="move-down"]')?.addEventListener('click',()=>{modal.close();moveItem(item,1)});
  dialog.querySelector('[data-menu="categories"]')?.addEventListener('click',()=>{modal.close();editCategoryOrder()});
  dialog.querySelector('[data-menu="logout"]')?.addEventListener('click',async()=>{await db.auth.signOut();await checkAdmin();await refresh();modal.close();render()});
 }
+async function moveItem(x,step){
+ if(!admin||!x)return;const index=items.findIndex(i=>i.id===x.id),target=index+step;if(index<0||target<0||target>=items.length)return;
+ const neighbour=items[target],outside=items[target+step],newOrder=outside?Math.round((neighbour.sort_order+outside.sort_order)/2):neighbour.sort_order+step*1000;
+ if(newOrder===neighbour.sort_order||(outside&&newOrder===outside.sort_order)){notify('순서를 조정할 수 없어요.');return}
+ const result=await db.from('toolbox_items').update({sort_order:newOrder}).eq('id',x.id);if(result.error)notify('순서를 바꾸지 못했어요.');else{await refresh();render();notify('순서를 바꿨어요')}
+}
 function editCategoryOrder(){
- const defaults=['청소년','청년','중장년','어르신','어린이','창조와 자연','가족','행복','미래와 희망'];
- const current=[...new Set(items.flatMap(x=>x.tags||[]))].filter(t=>t!=='모든 연령');
+ const defaults=defaultCategories;
+ const used=new Set(items.flatMap(x=>x.tags||[]));if(used.has('모든 연령'))ageTags.forEach(t=>used.add(t));used.delete('모든 연령');const current=[...used];
  const order=[...new Set([...(categoryOrderRecord?.tags||[]),...defaults,...current])].filter(t=>current.includes(t));
  if(!categoryOrderRecord){notify('분류 순서를 불러오지 못했어요.');return}
  openDialog(`<div class="dialog-head"><h2>분류 순서</h2>${icon('close','닫기')}</div><div class="category-order"></div><p class="error" role="alert"></p><button type="button" class="primary category-save">저장</button>`);
@@ -121,7 +132,7 @@ function editCategoryOrder(){
  function draw(){list.innerHTML=order.length?order.map((t,i)=>`<div class="category-order-row"><span>${esc(t)}</span><div><button type="button" data-up="${i}" aria-label="${esc(t)} 앞으로 이동" ${i===0?'disabled':''}>↑</button><button type="button" data-down="${i}" aria-label="${esc(t)} 뒤로 이동" ${i===order.length-1?'disabled':''}>↓</button></div></div>`).join(''):'<p class="empty">분류 없음</p>';list.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.up);if(i>0){[order[i-1],order[i]]=[order[i],order[i-1]];draw()}});list.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.down);if(i<order.length-1){[order[i+1],order[i]]=[order[i],order[i+1]];draw()}})}draw();
  dialog.querySelector('.category-save').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{const res=await db.from('toolbox_category_order').update({tags:order,updated_at:new Date().toISOString()}).eq('id',true).eq('updated_at',categoryOrderRecord.updated_at).select('tags,updated_at').maybeSingle();if(res.error)throw res.error;if(!res.data)throw Error('다른 기기에서 순서가 변경됐어요. 다시 열어 주세요.');categoryOrderRecord=res.data;modal.close();render();notify('저장했어요')}catch(err){dialog.querySelector('.error').textContent=err.message||'저장하지 못했어요.'}finally{b.disabled=false}};
 }
-function renderDetail(){let x=items.find(i=>i.id===itemId());if(!x){app.innerHTML='<p class="empty">자료를 찾을 수 없습니다.</p><a class="back" href="#/">← 목록</a>';return}let cover=x.images?.[0];app.innerHTML=`<article class="detail"><div class="detail-head"><div></div><div>${admin?'<button type="button" class="icon" data-move="up" aria-label="앞으로 이동">↑</button><button type="button" class="icon" data-move="down" aria-label="뒤로 이동">↓</button>'+icon('edit','수정'):''}${icon('share','공유')}${icon('star',stars.includes(x.id)?'즐겨찾기 해제':'즐겨찾기',stars.includes(x.id)?'active':'')}</div></div><h1>${esc(x.title)}</h1>${cover?`<button class="cover" aria-label="사진 보기" data-open="resume"><img data-path="${esc(cover)}" data-fallback="${esc(x.title)}" alt=""><span class="expand" aria-hidden="true">⤢</span></button>`:''}${x.description?`<p class="description">${esc(x.description)}</p>`:''}${safeURL(x.reference_url)?`<a class="reference" href="${esc(safeURL(x.reference_url))}" target="_blank" rel="noopener noreferrer">관련 자료 ↗</a>`:''}${floatingBack(listHash,listHash==='#/'?'분류로 돌아가기':'목록으로 돌아가기')}</article>`;fillImages(app);app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>showViewer(x,b.dataset.open==='resume'?0:Number(b.dataset.open)));app.querySelector('[data-action="star"]').onclick=()=>{stars=stars.includes(x.id)?stars.filter(id=>id!==x.id):[...stars,x.id];starSave();renderDetail()};app.querySelector('[data-action="share"]').onclick=async()=>{try{if(navigator.share)await navigator.share({title:x.title,url:location.href});else{await navigator.clipboard.writeText(location.href);notify('주소를 복사했어요')}}catch(e){if(e.name!=='AbortError')notify('주소를 복사하지 못했어요')}};app.querySelector('[data-action="edit"]')?.addEventListener('click',()=>edit(x));app.querySelectorAll('[data-move]').forEach(b=>b.onclick=async()=>{const index=items.findIndex(i=>i.id===x.id),step=b.dataset.move==='up'?-1:1,target=index+step;if(target<0||target>=items.length)return;const neighbour=items[target],outside=items[target+step];let newOrder=outside?Math.round((neighbour.sort_order+outside.sort_order)/2):neighbour.sort_order+step*1000;if(newOrder===neighbour.sort_order||(outside&&newOrder===outside.sort_order)){notify('순서를 조정할 수 없어요.');return}b.disabled=true;const result=await db.from('toolbox_items').update({sort_order:newOrder}).eq('id',x.id);if(result.error)notify('순서를 바꾸지 못했어요.');else{await refresh();renderDetail();notify('순서를 바꿨어요')}});}
+function renderDetail(){let x=items.find(i=>i.id===itemId());if(!x){app.innerHTML='<p class="empty">자료를 찾을 수 없습니다.</p><a class="back" href="#/">← 목록</a>';return}let cover=x.images?.[0];app.innerHTML=`<article class="detail"><div class="detail-head"><div></div><div>${icon('share','공유')}${icon('star',stars.includes(x.id)?'즐겨찾기 해제':'즐겨찾기',stars.includes(x.id)?'active':'')}${admin?menuButton():''}</div></div><h1>${esc(x.title)}</h1>${cover?`<button class="cover" aria-label="사진 보기" data-open="resume"><img data-path="${esc(cover)}" data-fallback="${esc(x.title)}" alt="">${x.images.length>1?`<span class="cover-count" aria-hidden="true">1 / ${x.images.length}</span>`:''}<span class="expand" aria-hidden="true">⤢</span></button>`:''}${x.description?`<p class="description">${esc(x.description)}</p>`:''}${safeURL(x.reference_url)?`<a class="reference" href="${esc(safeURL(x.reference_url))}" target="_blank" rel="noopener noreferrer">관련 자료 ↗</a>`:''}${floatingBack(listHash,listHash==='#/'?'분류로 돌아가기':'목록으로 돌아가기')}</article>`;fillImages(app);app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>showViewer(x,b.dataset.open==='resume'?0:Number(b.dataset.open)));app.querySelector('[data-action="star"]').onclick=()=>{stars=stars.includes(x.id)?stars.filter(id=>id!==x.id):[...stars,x.id];starSave();renderDetail()};app.querySelector('[data-action="share"]').onclick=async()=>{try{if(navigator.share)await navigator.share({title:x.title,url:location.href});else{await navigator.clipboard.writeText(location.href);notify('주소를 복사했어요')}}catch(e){if(e.name!=='AbortError')notify('주소를 복사하지 못했어요')}};app.querySelector('[data-action="menu"]')?.addEventListener('click',()=>showMenu(x));}
 function notify(t){const n=document.createElement('div');n.textContent=t;Object.assign(n.style,{position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#314a3b',color:'white',padding:'10px 16px',borderRadius:'8px',zIndex:'50'});document.body.append(n);setTimeout(()=>n.remove(),2200)}
 function openDialog(content){dialog.innerHTML=`<div class="dialog-body">${content}</div>`;if(!modal.open)modal.showModal();dialog.querySelector('[data-action="close"]')?.addEventListener('click',()=>modal.close())}
 function login(){openDialog(`<div class="dialog-head"><h2>관리</h2>${icon('close','닫기')}</div><form class="form" id="login"><label>이메일<input type="email" name="email" autocomplete="username" required></label><label>비밀번호<input type="password" name="password" autocomplete="current-password" required></label><p class="error" role="alert"></p><button class="primary">로그인</button><button type="button" class="secondary" data-signup>계정 만들기</button></form>`);dialog.querySelector('[data-signup]').onclick=async()=>{const f=dialog.querySelector('form'),msg=f.querySelector('.error'),email=f.elements.namedItem('email'),password=f.elements.namedItem('password');if(!email.reportValidity()||!password.reportValidity())return;const result=await db.auth.signUp({email:email.value,password:password.value});if(result.error){msg.textContent=result.error.message;return}await db.auth.signOut();session=null;msg.textContent='계정을 만들었어요. 이메일 확인 후 관리자 권한을 설정해 주세요.'};dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();let f=e.currentTarget,b=f.querySelector('button'),msg=f.querySelector('.error');b.disabled=true;const {error}=await db.auth.signInWithPassword({email:f.elements.namedItem('email').value,password:f.elements.namedItem('password').value});if(error){msg.textContent='이메일과 비밀번호를 확인해 주세요.';b.disabled=false;return}await checkAdmin();if(!admin){await db.auth.signOut();session=null;msg.textContent='관리 권한이 없는 계정이에요.';b.disabled=false;return}modal.close();await refresh();render()}}
@@ -136,7 +147,7 @@ function edit(item){
  async function tryClose(){if(saving)return;if(dirty&&!await confirmAction('변경 내용을 저장하지 않고 나갈까요?','나가기'))return;modal.close()}
  dialog.querySelector('[data-editor-close]').onclick=tryClose;
  const onCancel=e=>{e.preventDefault();tryClose()};modal.addEventListener('cancel',onCancel);
- modal.addEventListener('close',()=>{modal.classList.remove('editor-dialog');modal.removeEventListener('cancel',onCancel);temp.forEach(URL.revokeObjectURL)},{once:true});
+ modal.addEventListener('close',()=>{if(!modal.open)modal.classList.remove('editor-dialog');modal.removeEventListener('cancel',onCancel);temp.forEach(URL.revokeObjectURL)},{once:true});
  f.addEventListener('input',changed);f.addEventListener('change',changed);
  function drawTags(){tagList.innerHTML=choices.map(t=>`<button type="button" class="tag-choice" aria-label="${esc(t)}" aria-pressed="${selected.has(t)}" data-tag="${esc(t)}">${esc(t)}</button>`).join('');tagList.querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{selected.has(b.dataset.tag)?selected.delete(b.dataset.tag):selected.add(b.dataset.tag);changed();drawTags()})}
  function addTag(){const el=f.elements.namedItem('newtag'),value=el.value.trim();if(!value)return;if(!choices.includes(value))choices.push(value);selected.add(value);el.value='';changed();drawTags()}
@@ -175,7 +186,7 @@ function showViewer(item,index){
  function prefetch(){for(const i of [viewerIndex-1,viewerIndex+1])if(i>=0&&i<item.images.length)signed(item.images[i]).then(src=>{if(!closed){const img=new Image();img.src=src}}).catch(()=>{})}
  function picker(){
   pickerOpen=true;try{history.pushState({...history.state,toolboxViewer:token,toolboxPicker:true},'',location.href)}catch{}
-  openDialog(`<div class="dialog-head"><h2>사진</h2>${icon('close','닫기')}</div><div class="viewer-menu">${item.images.map((p,i)=>`<button type="button" data-jump="${i}" aria-label="${i+1}번째 사진"><img data-path="${esc(p)}" alt=""></button>`).join('')}</div>`);
+  openDialog(`<div class="dialog-head"><h2>사진</h2>${icon('close','닫기')}</div><div class="viewer-menu">${item.images.map((p,i)=>`<button type="button" data-jump="${i}" aria-label="${i+1}번째 사진" ${i===viewerIndex?'aria-current="true"':''}><img data-path="${esc(p)}" alt=""></button>`).join('')}</div>`);
   fillImages(dialog);dialog.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{viewerIndex=Number(b.dataset.jump);lastViewed.set(item.id,viewerIndex);modal.close();draw()});
   modal.addEventListener('close',()=>{if(pickerOpen){pickerOpen=false;if(history.state?.toolboxPicker&&history.state?.toolboxViewer===token)history.back()}},{once:true});
  }

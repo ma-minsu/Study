@@ -11,7 +11,7 @@ const icon=(name,label,extra='')=>`<button type="button" class="icon ${extra}" a
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let items=[],admin=false,session=null,filter='전체',favoritesOnly=false,categoryOrderRecord=null,savedScroll=0,viewerIndex=0,viewerItem=null,viewerHidden=false,startTouch=null;
 const lastViewed=new Map();
-const urlCache=new Map(),pendingImages=new Map();
+const urlCache=new Map(),pendingImages=new Map(),preloadedImages=new Map(),preloadingImages=new Set();
 let gridImageObserver=null,listHash='#/',hubScroll=0;
 function readStars(){try{const a=JSON.parse(localStorage.getItem('toolbox-stars')||'[]');return Array.isArray(a)?a:[]}catch{return []}}
 let stars=readStars();
@@ -37,10 +37,15 @@ async function primeSigned(paths){
  });
  await Promise.allSettled(jobs);
 }
+function preloadImage(path){
+ const connection=navigator.connection;if(!path||connection?.saveData||['slow-2g','2g'].includes(connection?.effectiveType))return;
+ const existing=preloadedImages.get(path);if(existing&&existing.until>Date.now()||preloadingImages.has(path))return;preloadingImages.add(path);
+ signed(path).then(url=>{const img=new Image();img.decoding='async';if('fetchPriority' in img)img.fetchPriority='low';img.onerror=()=>preloadedImages.delete(path);img.src=url;preloadedImages.delete(path);preloadedImages.set(path,{img,until:Date.now()+3300000});while(preloadedImages.size>4)preloadedImages.delete(preloadedImages.keys().next().value)}).catch(()=>{}).finally(()=>preloadingImages.delete(path));
+}
 function imagePending(img,pending){if(pending)img.dataset.loading='true';else delete img.dataset.loading;img.parentElement?.classList.toggle('image-pending',pending);if(pending)img.parentElement?.classList.remove('image-failed')}
 function imageFailed(img){if(!img.isConnected)return;imagePending(img,false);img.parentElement?.classList.add('image-failed');img.alt=img.dataset.fallback||'이미지를 불러오지 못했습니다.';img.dispatchEvent(new Event('toolbox-image-error'))}
 async function loadImage(img){
- if(!img.isConnected)return;imagePending(img,true);
+ if(!img.isConnected)return;imagePending(img,true);if(img.loading!=='lazy'&&'fetchPriority' in img)img.fetchPriority='high';
  try{const url=await signed(img.dataset.path);if(img.isConnected){img.onload=()=>imagePending(img,false);img.onerror=()=>imageFailed(img);img.src=url}}catch{imageFailed(img)}
 }
 function loadGroup(imgs){
@@ -103,7 +108,7 @@ function renderList(){
  if(ageTags.includes(filter))shown.sort((a,b)=>Number(!(a.tags||[]).includes(filter))-Number(!(b.tags||[]).includes(filter)));
  const heading=favoritesOnly?'즐겨찾기':filter;
  app.innerHTML=`<div class="collection-head"><h1>${esc(heading)}</h1><div class="collection-actions"></div></div><section class="grid" aria-label="자료">${shown.map(x=>`<a class="tile" href="#/${x.id}" data-item="${x.id}"><div class="tile-visual">${x.cover||x.images?.[0]?`<img data-path="${esc(x.cover||x.images[0])}" data-fallback="${esc(x.title)}" alt="" loading="lazy">`:'<div class="placeholder"></div>'}<span class="tile-title">${esc(x.title)}</span>${!x.published?'<small class="draft-badge">비공개</small>':''}</div></a>`).join('')}</section>${!shown.length?`<div class="empty">${favoritesOnly?'즐겨찾기 없음':'자료 없음'}${favoritesOnly||filter!=='전체'?'<a class="empty-reset" href="#/all">전체 보기</a>':''}</div>`:''}${floatingBack('#/','분류로 돌아가기')}`;
- fillImages(app);fitTileTitles(app);app.querySelectorAll('[data-item]').forEach(a=>a.onclick=()=>{savedScroll=window.scrollY});
+ fillImages(app);fitTileTitles(app);if(shown[0]?.images?.[0]&&shown[0].images[0]!==shown[0].cover)preloadImage(shown[0].images[0]);app.querySelectorAll('[data-item]').forEach(a=>a.onclick=()=>{savedScroll=window.scrollY});
 }
 
 function fitTileTitles(root){
@@ -182,6 +187,38 @@ function notify(t){const n=document.createElement('div');n.textContent=t;Object.
 function openDialog(content){dialog.innerHTML=`<div class="dialog-body">${content}</div>`;if(!modal.open)modal.showModal();dialog.querySelector('[data-action="close"]')?.addEventListener('click',()=>modal.close())}
 function login(){openDialog(`<div class="dialog-head"><h2>관리</h2>${icon('close','닫기')}</div><form class="form" id="login"><label>이메일<input type="email" name="email" autocomplete="username" required></label><label>비밀번호<input type="password" name="password" autocomplete="current-password" required></label><p class="error" role="alert"></p><button class="primary">로그인</button><button type="button" class="secondary" data-signup>계정 만들기</button></form>`);dialog.querySelector('[data-signup]').onclick=async()=>{const f=dialog.querySelector('form'),msg=f.querySelector('.error'),email=f.elements.namedItem('email'),password=f.elements.namedItem('password');if(!email.reportValidity()||!password.reportValidity())return;const result=await db.auth.signUp({email:email.value,password:password.value});if(result.error){msg.textContent=result.error.message;return}await db.auth.signOut();session=null;msg.textContent='계정을 만들었어요. 이메일 확인 후 관리자 권한을 설정해 주세요.'};dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();let f=e.currentTarget,b=f.querySelector('button'),msg=f.querySelector('.error');b.disabled=true;const {error}=await db.auth.signInWithPassword({email:f.elements.namedItem('email').value,password:f.elements.namedItem('password').value});if(error){msg.textContent='이메일과 비밀번호를 확인해 주세요.';b.disabled=false;return}await checkAdmin();if(!admin){await db.auth.signOut();session=null;msg.textContent='관리 권한이 없는 계정이에요.';b.disabled=false;return}modal.close();await refresh();render()}}
 function confirmAction(title,action){return new Promise(resolve=>{const d=document.createElement('dialog');d.className='confirm-dialog';d.innerHTML=`<div class="confirm-inner"><h2>${esc(title)}</h2><div><button type="button" data-cancel>취소</button><button type="button" class="confirm-primary" data-confirm>${esc(action)}</button></div></div>`;document.body.append(d);let done=false;const finish=value=>{if(done)return;done=true;d.close();d.remove();resolve(value)};d.querySelector('[data-cancel]').onclick=()=>finish(false);d.querySelector('[data-confirm]').onclick=()=>finish(true);d.addEventListener('cancel',e=>{e.preventDefault();finish(false)});d.showModal();d.querySelector('[data-cancel]').focus()})}
+const maxToolboxInput=40*1024*1024,maxToolboxStored=10*1024*1024,maxToolboxDimension=2048;
+async function animatedToolboxImage(file){
+ if(file.type==='image/gif')return true;
+ if(file.type==='image/webp'){
+  const b=new Uint8Array(await file.slice(0,32).arrayBuffer());if(b.length<21)return true;
+  const tag=String.fromCharCode(...b.slice(12,16));return tag==='VP8X'?(b[20]&2)!==0:!['VP8 ','VP8L'].includes(tag);
+ }
+ if(file.type==='image/png'){
+  const bytes=new Uint8Array(await file.slice(0,65536).arrayBuffer());if(bytes.length<20)return true;
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let p=8;
+  while(p+12<=bytes.length){const size=view.getUint32(p),tag=String.fromCharCode(...bytes.slice(p+4,p+8));if(tag==='acTL')return true;if(tag==='IDAT'||tag==='IEND')return false;const next=p+12+size;if(next<=p||next>bytes.length)return true;p=next}return true;
+ }
+ return false;
+}
+async function decodeToolboxImage(file){
+ if(typeof createImageBitmap==='function'){try{const bitmap=await createImageBitmap(file);return {image:bitmap,width:bitmap.width,height:bitmap.height,release:()=>bitmap.close()}}catch{}}
+ const url=URL.createObjectURL(file);try{const image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('사진을 열지 못했어요.'));image.src=url});return {image,width:image.naturalWidth,height:image.naturalHeight,release:()=>URL.revokeObjectURL(url)}}catch(e){URL.revokeObjectURL(url);throw e}
+}
+function canvasBlob(canvas,type,quality){return new Promise(resolve=>canvas.toBlob(resolve,type,quality))}
+async function prepareToolboxImage(file){
+ if(await animatedToolboxImage(file)){if(file.size>maxToolboxStored)throw Error('움직이는 사진은 10MB 이하로 선택해 주세요.');return file}
+ let decoded;
+ try{decoded=await decodeToolboxImage(file);if(!decoded.width||!decoded.height)throw Error('사진 크기를 확인하지 못했어요.');
+  const scale=Math.min(1,maxToolboxDimension/Math.max(decoded.width,decoded.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(decoded.width*scale));canvas.height=Math.max(1,Math.round(decoded.height*scale));
+  const context=canvas.getContext('2d');if(!context)throw Error('사진을 준비하지 못했어요.');context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(decoded.image,0,0,canvas.width,canvas.height);
+  let blob=await canvasBlob(canvas,'image/webp',.88);if(blob?.type!=='image/webp'&&file.type==='image/jpeg')blob=await canvasBlob(canvas,'image/jpeg',.88);canvas.width=1;canvas.height=1;
+  if(!blob||!['image/jpeg','image/png','image/webp'].includes(blob.type))throw Error('사진을 준비하지 못했어요.');
+  if(blob.size>=file.size&&file.size<=maxToolboxStored)return file;
+  if(blob.size>maxToolboxStored)throw Error('사진을 10MB 이하로 줄이지 못했어요.');
+  return new File([blob],file.name,{type:blob.type,lastModified:file.lastModified});
+ }catch(err){if(file.size<=maxToolboxStored)return file;throw Error(err?.message||'사진을 줄이지 못했어요.')}finally{decoded?.release()}
+}
 function edit(item){
  let photos=[...(item?.images||[])],cover=item?.cover||photos[0]||'',files=new Map(),temp=[],dirty=false,saving=false,dragIndex=-1;
  const presets=['모든 연령','어린이','청소년','청년','중장년','어르신','창조와 자연','가족','행복','미래와 희망'];
@@ -204,14 +241,14 @@ function edit(item){
   previewCover();fillImages(list);list.querySelector('[data-extra-files]').onchange=e=>addFiles(e.target);list.querySelectorAll('[data-cover]').forEach(b=>b.onclick=()=>{cover=photos[+b.dataset.cover];changed();draw()});list.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{let i=+b.dataset.up;if(i){[photos[i-1],photos[i]]=[photos[i],photos[i-1]];changed();draw()}});list.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>{let i=+b.dataset.down;if(i<photos.length-1){[photos[i+1],photos[i]]=[photos[i],photos[i+1]];changed();draw()}});list.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{photos.splice(+b.dataset.remove,1);if(!photos.includes(cover))cover=photos[0]||'';changed();draw()});
   list.querySelectorAll('[data-photo]').forEach(tile=>{let hold=null,active=false,target=-1,origin=null;const preview=tile.querySelector('.photo-preview');preview.addEventListener('contextmenu',e=>e.preventDefault());preview.addEventListener('touchstart',e=>{if(e.target.closest('button')||e.touches.length!==1)return;const t=e.touches[0];origin={x:t.clientX,y:t.clientY};hold=setTimeout(()=>{active=true;tile.classList.add('dragging')},450)},{passive:true});preview.addEventListener('touchmove',e=>{if(!origin||e.touches.length!==1){clearTimeout(hold);return}const t=e.touches[0];if(!active&&Math.hypot(t.clientX-origin.x,t.clientY-origin.y)>10){clearTimeout(hold);origin=null;return}if(active){e.preventDefault();list.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'));const dest=document.elementFromPoint(t.clientX,t.clientY)?.closest('[data-photo]');target=dest?+dest.dataset.photo:-1;if(dest&&dest!==tile)dest.classList.add('drop-target')}},{passive:false});const end=()=>{clearTimeout(hold);if(active&&target>=0&&target!==+tile.dataset.photo){const [moved]=photos.splice(+tile.dataset.photo,1);photos.splice(target,0,moved);changed();draw()}else{tile.classList.remove('dragging');list.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'))}active=false;origin=null;target=-1};preview.addEventListener('touchend',end);preview.addEventListener('touchcancel',()=>{target=-1;end()});tile.ondragstart=e=>{dragIndex=+tile.dataset.photo;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(dragIndex))};tile.ondragover=e=>e.preventDefault();tile.ondrop=e=>{e.preventDefault();const target=+tile.dataset.photo;if(dragIndex>=0&&dragIndex!==target){const [moved]=photos.splice(dragIndex,1);photos.splice(target,0,moved);changed();draw()}dragIndex=-1}});
  }
- function addFiles(input){let invalid=false;for(const file of input.files){if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)||file.size>10485760){invalid=true;continue}const id='new:'+crypto.randomUUID(),url=URL.createObjectURL(file);temp.push(url);files.set(id,{file,url});photos.push(id);if(!cover)cover=id;changed()}input.value='';f.querySelector('.photo-error').textContent=invalid?'일부 사진을 추가하지 못했어요. JPG, PNG, WEBP, GIF 사진을 한 장당 10MB 이하로 선택해 주세요.':'';draw()}
+ function addFiles(input){let invalid=false;for(const file of input.files){if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)||file.size>(file.type==='image/gif'?maxToolboxStored:maxToolboxInput)){invalid=true;continue}const id='new:'+crypto.randomUUID(),url=URL.createObjectURL(file);temp.push(url);files.set(id,{file,url});photos.push(id);if(!cover)cover=id;changed()}input.value='';f.querySelector('.photo-error').textContent=invalid?'일부 사진을 추가하지 못했어요. JPG·PNG·WEBP는 40MB 이하, GIF는 10MB 이하로 선택해 주세요.':'';draw()}
  draw();
  f.onsubmit=async e=>{
   e.preventDefault();if(saving)return;const submit=dialog.querySelector('.editor-save'),msg=f.querySelector('.error');let uploaded=[];
   msg.textContent='';if(!photos.length){msg.textContent='사진을 하나 이상 선택해 주세요.';msg.scrollIntoView({block:'nearest'});return}const titleValue=f.elements.namedItem('title').value.trim();if(!titleValue){msg.textContent='이름을 입력해 주세요.';f.elements.namedItem('title').focus();return}
   saving=true;submit.disabled=true;submit.classList.add('is-pending');f.inert=true;f.setAttribute('aria-busy','true');
   try{const mapped=photos.slice();const queue=photos.map((p,i)=>({p,i})).filter(x=>files.has(x.p));
-   for(let start=0;start<queue.length;start+=3){const batch=queue.slice(start,start+3);const outcomes=await Promise.allSettled(batch.map(async({p,i})=>{const file=files.get(p).file,path=`${crypto.randomUUID()}/${crypto.randomUUID()}.${({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[file.type]}`;const {error}=await db.storage.from('ministry-toolbox').upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;files.get(p).path=path;uploaded.push(path);mapped[i]=path}));const failure=outcomes.find(x=>x.status==='rejected');if(failure)throw failure.reason}
+   for(let start=0;start<queue.length;start+=3){const batch=queue.slice(start,start+3);for(const {p} of batch){const entry=files.get(p);if(!entry.prepared)entry.prepared=await prepareToolboxImage(entry.file)}const outcomes=await Promise.allSettled(batch.map(async({p,i})=>{const file=files.get(p).prepared,path=`${crypto.randomUUID()}/${crypto.randomUUID()}.${({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[file.type]}`;const {error}=await db.storage.from('ministry-toolbox').upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;files.get(p).path=path;uploaded.push(path);mapped[i]=path}));const failure=outcomes.find(x=>x.status==='rejected');if(failure)throw failure.reason}
 
    const payload={title:titleValue,description:f.elements.namedItem('description').value.trim(),tags:[...selected],images:mapped,cover:files.has(cover)?files.get(cover).path:cover,reference_url:f.elements.namedItem('reference').value.trim()||null,published:f.elements.namedItem('published').checked,updated_at:new Date().toISOString()};if(!payload.title)throw Error('이름을 입력해 주세요.');
    let res=item?await db.from('toolbox_items').update(payload).eq('id',item.id).eq('updated_at',item.updated_at).select().maybeSingle():await db.from('toolbox_items').insert({...payload,sort_order:Date.now()}).select().single();if(res.error)throw res.error;if(!res.data)throw Error('다른 기기에서 변경되었어요. 새로고침 후 다시 수정해 주세요.');uploaded=[];dirty=false;modal.close();await refresh();if(!item)location.hash='#/'+res.data.id;else render();notify('저장했어요');
@@ -228,7 +265,7 @@ function showViewer(item,index){
  function close(){if(viewerHistory&&history.state?.toolboxViewer===token){history.back()}else cleanup()}
  function onHistory(e){if(pickerOpen&&!e.state?.toolboxPicker){pickerOpen=false;if(modal.open)modal.close();if(e.state?.toolboxViewer===token)return}if(e.state?.toolboxViewer!==token)cleanup()}
  window.addEventListener('popstate',onHistory);
- function prefetch(){for(const i of [viewerIndex-1,viewerIndex+1])if(i>=0&&i<item.images.length)signed(item.images[i]).then(src=>{if(!closed){const img=new Image();img.src=src}}).catch(()=>{})}
+ function prefetch(){for(const i of [viewerIndex-1,viewerIndex+1])if(i>=0&&i<item.images.length&&!closed)preloadImage(item.images[i])}
  function picker(){
   pickerOpen=true;try{history.pushState({...history.state,toolboxViewer:token,toolboxPicker:true},'',location.href)}catch{}
   openDialog(`<div class="dialog-head"><h2>사진</h2>${icon('close','닫기')}</div><div class="viewer-menu">${item.images.map((p,i)=>`<button type="button" data-jump="${i}" aria-label="${i+1}번째 사진" ${i===viewerIndex?'aria-current="true"':''}><img data-path="${esc(p)}" alt=""></button>`).join('')}</div>`);

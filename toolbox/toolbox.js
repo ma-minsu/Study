@@ -86,8 +86,8 @@ const categoryIcons={
  '어린이':'<path d="M12 3 5 10l7 7 7-7-7-7ZM12 17v1c0 2 2 2 2 3"/><path d="m8 8 8 4"/>',
  '청소년':'<path d="M5 10 12 6l7 4-7 4-7-4ZM8 12v4c2.5 2 5.5 2 8 0v-4M19 10v5"/>',
  '청년':'<circle cx="12" cy="7" r="3"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/>',
- '중장년':'<path d="M12 20v-8M7 20h10M12 13c-4-1-5-4-5-7 3 0 5 2 5 5 0-3 2-5 5-5 0 3-1 6-5 7Z"/>',
- '어르신':'<path d="M12 20v-7M8 20h8M12 4c-3-2-6 .5-5 3-3 1-3 5 0 6 1.5 2 3.5 2 5 .5 1.5 1.5 3.5 1.5 5-.5 3-1 3-5 0-6 1-2.5-2-5-5-3Z"/>',
+ '중장년':'<circle cx="12" cy="7.5" r="3.3"/><path d="M5 20v-1a7 7 0 0 1 14 0v1M8.5 7c.8-.6 2-.9 3.5-.9s2.7.3 3.5.9"/>',
+ '어르신':'<circle cx="12" cy="8" r="3.4"/><path d="M5 20v-1a7 7 0 0 1 14 0v1M8.8 6.2c.9-.7 2-1 3.2-1s2.3.3 3.2 1M9.5 10h5"/>',
  '창조와 자연':'<path d="M19.5 4.5C11 4 5 7 5 13a5 5 0 0 0 5 5c6 0 9-6 9.5-13.5ZM4 20c3-4 6-7 11-10"/>',
  '자연':'<path d="M19.5 4.5C11 4 5 7 5 13a5 5 0 0 0 5 5c6 0 9-6 9.5-13.5ZM4 20c3-4 6-7 11-10"/>',
  '가족':'<path d="m3.5 11 8.5-7 8.5 7M6.5 10v9.5h11V10M10 19.5v-5h4v5"/>',
@@ -95,7 +95,7 @@ const categoryIcons={
  '미래와 희망':'<path d="M12 3v3M4.5 9l2.2 1M19.5 9l-2.2 1M4 19h16M7 19a5 5 0 0 1 10 0"/>',
  '동물':'<path d="M8 13c-1.8 0-3 1.5-3 3 0 2 2 2.6 3.5 2 1-.5 2-.8 3.5-.8s2.5.3 3.5.8C17 18.6 19 18 19 16c0-1.5-1.2-3-3-3-1 0-2 .8-4 .8S9 13 8 13Z"/><circle cx="6.5" cy="9" r="1.2"/><circle cx="10" cy="6.5" r="1.2"/><circle cx="14" cy="6.5" r="1.2"/><circle cx="17.5" cy="9" r="1.2"/>'
 };
-function categoryEntry(label,href,index){const tone=label==='전체'?0:label==='즐겨찾기'?1:[...label].reduce((n,c)=>(n*31+c.codePointAt(0))%6,0);const glyph=categoryIcons[label]||'<path d="M4 5.5h6l9 9-5 5-10-9v-5ZM7.5 8.5h.01"/>';return `<a class="category-entry" href="${esc(href)}" ${admin&&index>=2?`data-category="${esc(label)}" draggable="true"`:``}><span class="category-mark category-tone-${tone}" aria-hidden="true"><svg viewBox="0 0 24 24">${glyph}</svg></span><span class="category-name">${esc(label)}</span></a>`}
+function categoryEntry(label,href,index){const tone=label==='전체'?0:label==='즐겨찾기'?1:ageTags.includes(label)?0:[...label].reduce((n,c)=>(n*31+c.codePointAt(0))%6,0);const glyph=categoryIcons[label]||'<path d="M4 5.5h6l9 9-5 5-10-9v-5ZM7.5 8.5h.01"/>';return `<a class="category-entry" href="${esc(href)}" ${admin&&index>=2?`data-category="${esc(label)}" draggable="true"`:``}><span class="category-mark category-tone-${tone}" aria-hidden="true"><svg viewBox="0 0 24 24">${glyph}</svg></span><span class="category-name">${esc(label)}</span></a>`}
 function floatingBack(href,label){return `<a class="floating-back" href="${esc(href)}" aria-label="${esc(label)}" title="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg></a>`}
 function renderHub(){
  gridImageObserver?.disconnect();const tags=categories();
@@ -116,18 +116,20 @@ function enableCategoryDragging(){
   catch(e){try{await refresh()}catch{}renderHub();notify(e.message||'순서를 저장하지 못했어요.')}finally{savingOrder=false}
  }
  function moveTo(target){if(!drag||!target||target===drag||!target.dataset.category)return;const nodes=entries(),from=nodes.indexOf(drag),to=nodes.indexOf(target);if(from<0||to<0)return;grid.insertBefore(drag,from<to?target.nextSibling:target)}
+ function closeControls(){app.querySelector('.category-adjust')?.remove();grid.querySelectorAll('.category-selected').forEach(x=>x.classList.remove('category-selected'))}
+ function showControls(el){if(!el?.isConnected||savingOrder)return;closeControls();el.classList.add('category-selected');const nodes=entries(),i=nodes.indexOf(el),bar=document.createElement('div');bar.className='category-adjust';bar.setAttribute('role','group');bar.setAttribute('aria-label',el.dataset.category+' 순서 변경');bar.innerHTML=`<span>${esc(el.dataset.category)}</span><button type="button" data-step="-1" aria-label="${esc(el.dataset.category)} 앞으로 이동" ${i===0?'disabled':''}>‹</button><button type="button" data-step="1" aria-label="${esc(el.dataset.category)} 뒤로 이동" ${i===nodes.length-1?'disabled':''}>›</button><button type="button" data-dismiss aria-label="순서 변경 닫기">×</button>`;app.append(bar);bar.querySelector('[data-dismiss]').onclick=()=>{closeControls();el.focus()};bar.querySelectorAll('[data-step]').forEach(button=>button.onclick=async()=>{if(savingOrder)return;const before=entries().map(x=>x.dataset.category),nodes=entries(),target=nodes[nodes.indexOf(el)+Number(button.dataset.step)];if(!target)return;drag=el;moveTo(target);drag=null;bar.querySelectorAll('button').forEach(b=>b.disabled=true);await save(before);if(el.isConnected){showControls(el);app.querySelector('.category-adjust [data-step="'+button.dataset.step+'"]:not(:disabled)')?.focus()}})}
  grid.addEventListener('click',e=>{if(Date.now()<suppressUntil)e.preventDefault()},true);
  entries().forEach(el=>{
-  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('contextmenu',e=>{e.preventDefault();if(!start)showControls(el)});
   el.addEventListener('touchstart',e=>{if(e.touches.length!==1||savingOrder)return;const t=e.touches[0];start={x:t.clientX,y:t.clientY,before:entries().map(x=>x.dataset.category)};hold=setTimeout(()=>{if(!start)return;drag=el;drag.classList.add('category-dragging');navigator.vibrate?.(12)},450)},{passive:true});
   el.addEventListener('touchmove',e=>{if(!start||e.touches.length!==1)return;const t=e.touches[0];if(!drag&&Math.hypot(t.clientX-start.x,t.clientY-start.y)>10){clearTimeout(hold);start=null;return}if(drag){e.preventDefault();moveTo(document.elementFromPoint(t.clientX,t.clientY)?.closest('[data-category]'))}},{passive:false});
-  function finish(cancelled){clearTimeout(hold);if(drag){const before=start?.before||[];drag.classList.remove('category-dragging');drag=null;suppressUntil=Date.now()+600;if(cancelled){renderHub()}else save(before)}start=null}
+  function finish(cancelled){clearTimeout(hold);if(drag){const before=start?.before||[],selected=drag,moved=entries().map(x=>x.dataset.category).join('\0')!==before.join('\0');drag.classList.remove('category-dragging');drag=null;suppressUntil=Date.now()+600;if(cancelled){renderHub()}else if(moved){closeControls();save(before)}else showControls(selected)}start=null}
   el.addEventListener('touchend',()=>finish(false));el.addEventListener('touchcancel',()=>finish(true));
   el.addEventListener('dragstart',e=>{if(savingOrder){e.preventDefault();return}start={before:entries().map(x=>x.dataset.category)};drag=el;drag.classList.add('category-dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',el.dataset.category)});
   el.addEventListener('dragover',e=>{if(drag){e.preventDefault();moveTo(el)}});
   el.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const before=start.before;drag.classList.remove('category-dragging');drag=null;start=null;suppressUntil=Date.now()+600;save(before)});
   el.addEventListener('dragend',()=>{if(drag){drag.classList.remove('category-dragging');drag=null;start=null;renderHub()}});
-  el.addEventListener('keydown',e=>{if(!e.altKey||!['ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(e.key)||savingOrder)return;e.preventDefault();const nodes=entries(),i=nodes.indexOf(el),delta=['ArrowUp','ArrowLeft'].includes(e.key)?-1:1,target=nodes[i+delta];if(!target)return;const before=nodes.map(x=>x.dataset.category);drag=el;moveTo(target);drag=null;el.focus();save(before)});
+  el.addEventListener('keydown',e=>{if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')){e.preventDefault();showControls(el);return}if(!e.altKey||!['ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(e.key)||savingOrder)return;e.preventDefault();const nodes=entries(),i=nodes.indexOf(el),delta=['ArrowUp','ArrowLeft'].includes(e.key)?-1:1,target=nodes[i+delta];if(!target)return;const before=nodes.map(x=>x.dataset.category);drag=el;moveTo(target);drag=null;el.focus();save(before)});
  });
 }
 function renderList(){
@@ -310,11 +312,10 @@ function showViewer(item,index){
   modal.addEventListener('close',()=>{if(pickerOpen){pickerOpen=false;if(history.state?.toolboxPicker&&history.state?.toolboxViewer===token)history.back()}},{once:true});
  }
  function draw(){
-  lastViewed.set(item.id,viewerIndex);el.classList.toggle('hidden-ui',viewerHidden);
-  el.innerHTML=`<div class="viewer-head"><span></span><button class="viewer-count" data-count aria-label="${viewerIndex+1} / ${item.images.length}, 사진 목록"><span>${viewerIndex+1} / ${item.images.length}</span><svg class="viewer-count-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>${icon('close','닫기')}</div><div class="viewer-image"><img data-path="${esc(item.images[viewerIndex])}" data-fallback="사진을 불러오지 못했어요" alt="${esc(item.title)} ${viewerIndex+1}"><button type="button" class="viewer-retry" hidden>다시 시도</button></div><div class="viewer-foot">${icon('left','이전 사진')}${icon('right','다음 사진')}</div>`;
+  lastViewed.set(item.id,viewerIndex);el.classList.toggle('hidden-ui',viewerHidden);const multiple=item.images.length>1;
+  el.innerHTML=`<div class="viewer-head"><span></span>${multiple?`<button class="viewer-count" data-count aria-label="${viewerIndex+1} / ${item.images.length}, 사진 목록"><span>${viewerIndex+1} / ${item.images.length}</span><svg class="viewer-count-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>`:'<span></span>'}${icon('close','닫기')}</div><div class="viewer-image"><img data-path="${esc(item.images[viewerIndex])}" data-fallback="사진을 불러오지 못했어요" alt="${esc(item.title)} ${viewerIndex+1}"><button type="button" class="viewer-retry" hidden>다시 시도</button></div><div class="viewer-foot">${multiple?icon('left','이전 사진')+icon('right','다음 사진'):''}</div>`;
   const image=el.querySelector('.viewer-image img'),retry=el.querySelector('.viewer-retry');image.addEventListener('toolbox-image-error',()=>{retry.hidden=false});retry.onclick=e=>{e.stopPropagation();retry.hidden=true;urlCache.delete(image.dataset.path);loadImage(image)};fillImages(el);prefetch();el.querySelector('[data-action=close]').onclick=close;
-  const previous=el.querySelector('[data-action=left]'),next=el.querySelector('[data-action=right]');previous.disabled=viewerIndex===0;next.disabled=viewerIndex===item.images.length-1;
-  previous.onclick=()=>{if(viewerIndex>0){viewerIndex--;draw()}};next.onclick=()=>{if(viewerIndex<item.images.length-1){viewerIndex++;draw()}};el.querySelector('[data-count]').onclick=picker;
+  const previous=el.querySelector('[data-action=left]'),next=el.querySelector('[data-action=right]');if(previous&&next){previous.disabled=viewerIndex===0;next.disabled=viewerIndex===item.images.length-1;previous.onclick=()=>{if(viewerIndex>0){viewerIndex--;draw()}};next.onclick=()=>{if(viewerIndex<item.images.length-1){viewerIndex++;draw()}}}el.querySelector('[data-count]')?.addEventListener('click',picker);
   const area=el.querySelector('.viewer-image');area.onclick=()=>{if(Date.now()<suppressClickUntil)return;viewerHidden=!viewerHidden;el.classList.toggle('hidden-ui',viewerHidden)};
   area.ontouchstart=e=>{startTouch=e.touches.length===1&&(!window.visualViewport||window.visualViewport.scale<=1.05)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null};
   area.ontouchend=e=>{if(!startTouch||e.changedTouches.length!==1||e.touches.length)return;let dx=e.changedTouches[0].clientX-startTouch.x,dy=e.changedTouches[0].clientY-startTouch.y;startTouch=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){suppressClickUntil=Date.now()+400;const target=Math.max(0,Math.min(item.images.length-1,viewerIndex+(dx<0?1:-1)));if(target!==viewerIndex){viewerIndex=target;draw()}}};

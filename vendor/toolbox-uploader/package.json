@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@uppy/core": "6.3.1",
+    "@uppy/dashboard": "6.0.3",
+    "@uppy/locales": "5.3.2",
+    "esbuild": "0.25.11",
+    "sortablejs": "1.15.7"
+  }
+}

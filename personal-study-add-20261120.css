@@ -1,0 +1,31 @@
+.personal-add-sheet{overscroll-behavior:contain}
+.personal-edit-dialog.personal-add-sheet{width:min(92vw,500px);padding:26px;border-radius:22px}
+.personal-add-sheet .personal-edit-form{gap:19px}
+.personal-add-sheet .personal-edit-head{margin-bottom:2px}
+.personal-add-sheet .personal-edit-form label:not(.personal-approx){gap:9px;font-weight:600}
+.personal-add-sheet .personal-edit-form input:not([type=checkbox]),.personal-add-sheet .personal-edit-form select{min-height:52px;border-radius:12px;font-size:16px;font-weight:400}
+.personal-add-sheet .personal-edit-form .primary{min-height:52px;border-radius:12px}
+.personal-add-hint{margin:0 0 9px;color:#718378;font-size:12px;font-weight:500}
+.personal-add-suggestions,.personal-add-matches{min-width:0}
+.personal-add-chips{display:flex;flex-wrap:wrap;gap:8px}
+.personal-add-chips button{min-height:40px;padding:7px 14px;border:1px solid #d9e5d9;border-radius:22px;background:#eef3ec;color:#486950;font:inherit;font-size:14px}
+.personal-add-match-list{display:grid;border-top:1px solid #e0e8dc}
+.personal-add-match-list a{display:flex;align-items:center;justify-content:space-between;min-height:42px;color:#405e49;text-decoration:none;font-size:14px;border-bottom:1px solid #e0e8dc}
+.personal-add-match-list a span{color:#708879;font-size:12px}
+.personal-add-optional summary{min-height:42px;display:flex;align-items:center;gap:7px;color:#5e7866;font-size:14px;cursor:pointer}
+.personal-add-optional summary span{font-size:12px;color:#8b9b8c}
+.personal-add-optional[open] summary{margin-bottom:8px}
+.personal-add-segments{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;background:#e9efe8;border-radius:13px}
+.personal-add-segments button{min-height:46px;border:0;border-radius:10px;background:transparent;color:#708477;font:inherit;font-size:14px}
+.personal-add-segments button[aria-pressed=true]{background:#fff;color:#365c43;box-shadow:0 1px 5px #2949321a;font-weight:650}
+.personal-add-native-select{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;opacity:0;pointer-events:none}
+.personal-add-validation{margin:-8px 0 0;font-size:13px;line-height:1.5;color:#708577}
+.personal-add-validation:empty,.personal-add-matches:empty,.personal-add-suggestions:empty{display:none}
+.personal-add-validation a{color:#446f53;text-underline-offset:3px}
+.personal-add-sheet .ts-wrapper{font-weight:400}
+.personal-add-sheet .ts-wrapper.single .ts-control,.personal-add-sheet .ts-control{min-height:52px;display:flex;align-items:center;padding:12px;border:1px solid #d0ddcf;border-radius:12px;background:#fff;box-shadow:none;font-size:16px}
+.personal-add-sheet .ts-control input{min-height:0!important;padding:0!important;border:0!important;font-size:16px!important}
+.personal-add-sheet .ts-dropdown{border:1px solid #d0ddcf;border-radius:12px;box-shadow:0 8px 25px #253f2e1c;overflow:hidden;font-size:15px}
+.personal-add-sheet .ts-dropdown .option{padding:11px 12px}.personal-add-sheet .ts-dropdown .active{background:#eaf1e8;color:#365c43}
+.personal-person-add .personal-add-matches{margin:0 0 14px}.personal-person-add .personal-add-optional{margin:4px 0 12px}
+@media(max-width:600px){.personal-edit-dialog.personal-add-sheet{width:100%;max-width:none;max-height:min(88dvh,760px);margin:auto 0 0;padding:24px 24px max(24px,env(safe-area-inset-bottom));border-radius:24px 24px 0 0}.personal-add-sheet .ts-dropdown-content{max-height:180px}}

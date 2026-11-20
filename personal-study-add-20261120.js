@@ -1,0 +1,40 @@
+// Field-specific helpers use the existing catalogue and save handlers.
+function personalAddBookSelect(select,onChoose){
+ const options=bibleBooks.map(([name,alias,short])=>({value:name,text:name,aliases:[alias,short].join(' ')}));
+ select.innerHTML='<option value="">성경 책 선택</option>'+options.map(x=>`<option value="${esc(x.value)}">${esc(x.text)}</option>`).join('');
+ if(typeof TomSelect==='undefined'){select.addEventListener('change',()=>onChoose(select.value));return null}
+ return new TomSelect(select,{options,searchField:['text','aliases'],maxItems:1,maxOptions:null,closeAfterSelect:true,sortField:[{field:'$order'}],placeholder:'성경 책 이름 또는 약어',onChange:value=>{if(value)onChoose(value)},render:{no_results:()=>'<div class="no-results">일치하는 성경 책이 없어요.</div>'}});
+}
+function enhancePersonAdd(dialog){
+ const input=dialog.querySelector('#new-name'),form=dialog.querySelector('#person-form');dialog.classList.add('personal-add-sheet','personal-person-add');
+ let hint=dialog.querySelector('.personal-add-matches');if(!hint){hint=document.createElement('div');hint.className='personal-add-matches';hint.setAttribute('aria-live','polite');input.closest('label').after(hint)}
+ input.placeholder='예: 다윗';input.autocomplete='off';
+ const search=dialog.querySelector('#new-search').closest('label');if(!search.closest('details')){const detail=document.createElement('details');detail.className='personal-add-optional';detail.innerHTML='<summary>검색어 설정 <span>선택</span></summary>';search.before(detail);detail.append(search)}else search.closest('details').open=false
+ function update(){const term=input.value.trim().toLocaleLowerCase();if(!term){hint.innerHTML='';return}const found=allPeople().filter(p=>displayName(p.name).toLocaleLowerCase().includes(term)).slice(0,4);hint.innerHTML=found.length?'<div class="personal-add-hint">이미 있는 인물</div><div class="personal-add-match-list">'+found.map(p=>`<a href="${idHash(p.name)}?from=people">${esc(displayName(p.name))}<span>보기 ↗</span></a>`).join('')+'</div>':'';hint.querySelectorAll('a').forEach(a=>a.onclick=()=>dialog.close())}
+ input.oninput=update;update();form.querySelector('button[type=submit],button:not([type])').textContent='인물 추가';
+}
+function enhancePersonalSubjectDialog(dialog,field,existing){
+ dialog.classList.add('personal-add-sheet');const form=dialog.querySelector('form');
+ if(field==='traits'&&!existing){
+  const input=form.elements.name;input.placeholder='예: 동정심';input.autocomplete='off';const box=document.createElement('div');box.className='personal-add-suggestions';input.closest('label').after(box);
+  const ideas=['동정심','인내','배려','기꺼이 용서함','성실','절제','겸손','감사','용기','관대함','충성'];
+  function draw(){const value=input.value.trim(),shown=ideas.filter(x=>subjectVisible('traits',x)&&!subjectChoices().some(c=>c.group==='특성'&&c.name===x)&&(!value||x.includes(value))).slice(0,7);box.innerHTML=shown.length?'<p class="personal-add-hint">생각해 볼 특성</p><div class="personal-add-chips">'+shown.map(x=>`<button type="button" data-trait="${esc(x)}">${esc(x)}</button>`).join('')+'</div>':'';box.querySelectorAll('button').forEach(b=>b.onclick=()=>{input.value=b.dataset.trait;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus()})}input.addEventListener('input',draw);draw();
+ }
+ if(field==='prophecy'){
+  const input=form.elements.verse,label=input.closest('label');input.placeholder='예: 다니엘 2:31-45';input.autocomplete='off';
+  const helper=document.createElement('div');helper.className='personal-add-scripture';helper.innerHTML='<label>성경 책 찾기 <select aria-label="성경 책 찾기"></select></label>';label.before(helper);
+  const sel=helper.querySelector('select'),chooser=personalAddBookSelect(sel,book=>{const current=input.value.trim(),prefix=bibleBooks.flatMap(b=>b.slice(0,3)).sort((a,b)=>b.length-a.length).find(x=>current.startsWith(x)&&(!current[x.length]||/[\s\d]/.test(current[x.length])));if(current&&!prefix){input.focus();return}const suffix=prefix?current.slice(prefix.length).trim():'';input.value=book+' '+suffix;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();input.setSelectionRange(input.value.length,input.value.length)});dialog.addEventListener('close',()=>chooser?.destroy(),{once:true});
+  const msg=document.createElement('p');msg.className='personal-add-validation';msg.setAttribute('aria-live','polite');label.after(msg);
+  const draw=()=>{const value=input.value.trim();if(!value){msg.textContent='';return}const parsed=parseVerse(value);msg.textContent=parsed?'성구 형식을 확인했어요.':'책과 장·절의 형식을 확인해 주세요. 직접 입력한 내용도 저장할 수 있어요.'};input.addEventListener('input',draw);draw();
+ }
+}
+function enhanceHistoryYearDialog(dialog,group){
+ dialog.classList.add('personal-add-sheet');const form=dialog.querySelector('form'),select=form.elements.epoch,input=form.elements.year;const label=select.closest('label');
+ const segmented=document.createElement('div');segmented.className='personal-add-segments';segmented.setAttribute('role','group');segmented.setAttribute('aria-label','기원 선택');segmented.innerHTML='<button type="button" data-epoch="bc">BC · 기원전</button><button type="button" data-epoch="ad">AD · 기원후</button>';select.classList.add('personal-add-native-select');select.tabIndex=-1;select.setAttribute('aria-hidden','true');label.append(segmented);
+ const preview=document.createElement('p');preview.className='personal-add-validation';preview.setAttribute('aria-live','polite');input.closest('label').after(preview);
+ function update(){segmented.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.epoch===select.value)));const n=Number(input.value),y=select.value==='bc'?-n:n,existing=Number.isInteger(n)&&n>0?historyYearGroups().find(g=>g.id!==group?.id&&g.year===y&&!g.id.includes('century')&&!g.id.endsWith('approx')):null;preview.innerHTML=existing?`목록에 있는 연도예요. <a href="${idHash(existing.key)}?from=history">연구 보기 ↗</a>`:n>0&&n<=9999?(select.value==='bc'?'BC ':'AD ')+n:'';const link=preview.querySelector('a');if(link)link.onclick=()=>dialog.close()}
+ segmented.querySelectorAll('button').forEach(b=>b.onclick=()=>{select.value=b.dataset.epoch;update()});input.addEventListener('input',update);select.addEventListener('change',update);update();
+}
+function openBookStudyPicker(){
+ const d=document.createElement('dialog');d.className='personal-edit-dialog personal-add-sheet';d.innerHTML='<form class="personal-edit-form"><div class="personal-edit-head"><h2>성경 연구 시작</h2><button type="button" data-close aria-label="닫기">×</button></div><label>성경 책<select name="book" aria-label="성경 책 선택" required></select></label><p class="personal-add-validation">연구할 책을 선택해 주세요.</p><button type="submit" class="primary">열기</button></form>';document.body.append(d);const f=d.querySelector('form');d.querySelector('[data-close]').onclick=()=>d.close();const chooser=personalAddBookSelect(f.elements.book,()=>{});d.addEventListener('close',()=>{chooser?.destroy();d.remove()},{once:true});f.onsubmit=e=>{e.preventDefault();const book=f.elements.book.value;if(!book)return;d.close();location.hash=idHash('@book:'+book)+'?from=books'};d.showModal();
+}

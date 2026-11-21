@@ -60,7 +60,7 @@ function syncCenteredImageLoader(){
  const dialogs=[...document.querySelectorAll('dialog[open]')],activeDialog=dialogs.at(-1),activeViewer=document.querySelector('.viewer');
  const activeLayer=activeDialog||activeViewer||document,hasVisibleLoad=[...activeImageLoads].some(image=>activeLayer.contains(image));
  if(!hasVisibleLoad){centeredImageLoader?.remove();centeredImageLoader=null;return}
- if(!centeredImageLoader){centeredImageLoader=document.createElement('span');centeredImageLoader.className='toolbox-image-loader';centeredImageLoader.setAttribute('role','status');centeredImageLoader.setAttribute('aria-label','사진을 불러오는 중')}
+ if(!centeredImageLoader){centeredImageLoader=document.createElement('span');centeredImageLoader.className='toolbox-image-loader';centeredImageLoader.setAttribute('role','status');centeredImageLoader.setAttribute('aria-label','사진을 불러오는 중');const image=document.createElement('img');image.src='../assets/couple-line-avatars-20261030.webp';image.alt='';centeredImageLoader.append(image)}
  const host=activeDialog||document.fullscreenElement||document.body;if(centeredImageLoader.parentElement!==host)host.append(centeredImageLoader);
 }
 function showImageLoadingIndicator(img){

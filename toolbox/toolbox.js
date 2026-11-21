@@ -263,9 +263,25 @@ function shareToolboxItem(item,index=0,host=document.body){
  sheet.addEventListener('close',()=>{window.removeEventListener('popstate',shareBack);if(shareHistory&&history.state?.toolboxShare===shareToken)history.back();if(activeShareDialog===sheet)activeShareDialog=null;sheet.remove();if(previous?.isConnected)previous.focus({preventScroll:true})},{once:true});sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.close()});sheet.querySelector('.share-close').onclick=()=>sheet.close();
  const feedback=sheet.querySelector('.share-feedback');function showUrl(){const field=sheet.querySelector('.share-url-fallback');field.value=url;field.hidden=false;field.focus();field.select()}
  sheet.querySelector('.share-copy').onclick=async()=>{if(await copyShareUrl(url))feedback.textContent='링크를 복사했어요';else{feedback.textContent='주소를 길게 눌러 복사해 주세요';showUrl()}};
- const kakaoButton=sheet.querySelector('.share-kakao');let kakaoShare=null;kakaoButton.disabled=true;kakaoButton.setAttribute('aria-busy','true');loadKakaoShare().then(kakao=>{kakaoShare=kakao}).catch(()=>{}).finally(()=>{if(sheet.isConnected){kakaoButton.disabled=false;kakaoButton.removeAttribute('aria-busy')}});
+ const kakaoButton=sheet.querySelector('.share-kakao');let kakaoShare=null,kakaoImage='',sdkUnavailable=false;
+ async function prepareKakaoImage(retry=false){
+  kakaoButton.disabled=true;kakaoButton.setAttribute('aria-busy','true');if(retry)feedback.textContent='사진을 준비하고 있어요';
+  try{
+   try{kakaoShare=await loadKakaoShare();sdkUnavailable=false}catch{sdkUnavailable=true;return}
+   const path=item.images?.[index];if(!path)throw Error('공유할 사진이 없어요');
+   const source=await signed(path),result=await Promise.race([kakaoShare.Share.scrapImage({imageUrl:source}),new Promise((_,reject)=>setTimeout(()=>reject(Error('사진 준비 시간이 초과됐어요')),12000))]);
+   kakaoImage=safeURL(result?.infos?.original?.url);if(!kakaoImage)throw Error('사진을 준비하지 못했어요');
+   if(retry&&sheet.isConnected)feedback.textContent='준비됐어요. 카카오톡을 다시 눌러 주세요';
+  }catch{if(sheet.isConnected)feedback.textContent='사진을 준비하지 못했어요. 카카오톡을 눌러 다시 시도해 주세요'}
+  finally{if(sheet.isConnected){kakaoButton.disabled=false;kakaoButton.removeAttribute('aria-busy')}}
+ }
+ prepareKakaoImage();
  async function fallbackShare(){if(navigator.share){feedback.textContent='공유 창에서 카카오톡을 선택해 주세요';try{await navigator.share({title:item.title,url})}catch(error){if(error.name!=='AbortError'){feedback.textContent='공유 창을 열지 못했어요. 링크를 복사해 주세요';showUrl()}}}else if(await copyShareUrl(url)){feedback.textContent='링크를 복사했어요. 카카오톡에 붙여 넣어 주세요'}else{feedback.textContent='주소를 복사해 카카오톡에 붙여 넣어 주세요';showUrl()}}
- kakaoButton.onclick=()=>{if(kakaoShare){try{kakaoShare.Share.sendDefault({objectType:'text',text:item.title,link:{mobileWebUrl:url,webUrl:url},buttonTitle:'사진 보기'});feedback.textContent='';return}catch{}}fallbackShare()};
+ kakaoButton.onclick=()=>{
+  if(sdkUnavailable){fallbackShare();return}
+  if(!kakaoShare||!kakaoImage){prepareKakaoImage(true);return}
+  try{const link={mobileWebUrl:url,webUrl:url};kakaoShare.Share.sendDefault({objectType:'feed',content:{title:item.title,imageUrl:kakaoImage,link},buttons:[{title:'사진 보기',link}]});feedback.textContent=''}catch{fallbackShare()}
+ };
  loadQrGenerator().then(makeQr=>{if(!sheet.isConnected)return;const qr=makeQr(0,'M');qr.addData(url);qr.make();const count=qr.getModuleCount(),quiet=4,scale=8,canvas=sheet.querySelector('canvas');canvas.width=canvas.height=(count+quiet*2)*scale;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#142b1c';for(let row=0;row<count;row++)for(let col=0;col<count;col++)if(qr.isDark(row,col))ctx.fillRect((col+quiet)*scale,(row+quiet)*scale,scale,scale);sheet.querySelector('.share-qr-status').hidden=true}).catch(()=>{const status=sheet.querySelector('.share-qr-status');if(status)status.textContent='QR 코드를 불러오지 못했어요';});
 }
 

@@ -18,7 +18,8 @@ const thumbnailAttempts=new Set();
 function readStars(){try{const a=JSON.parse(localStorage.getItem('toolbox-stars')||'[]');return Array.isArray(a)?a:[]}catch{return []}}
 let stars=readStars();
 function starSave(){try{localStorage.setItem('toolbox-stars',JSON.stringify(stars))}catch{}}
-function itemId(){const m=location.hash.match(/^#\/([0-9a-f-]{36})$/i);return m?m[1]:null}
+function itemId(){const m=location.hash.match(/^#\/([0-9a-f-]{36})(?:\?[^#]*)?$/i);return m?m[1]:null}
+function sharedSlideIndex(){const query=location.hash.split('?')[1];const raw=query&&new URLSearchParams(query).get('slide');return raw&&/^[1-9]\d{0,5}$/.test(raw)?Number(raw)-1:0}
 function safeURL(s){try{const u=new URL(s);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return ''}}
 async function signOne(path){
  const {data,error}=await db.storage.from('ministry-toolbox').createSignedUrl(path,3600);if(error)throw error;if(!data?.signedUrl)throw Error('이미지를 불러오지 못했어요.');urlCache.set(path,{url:data.signedUrl,until:Date.now()+3300000});return data.signedUrl;
@@ -227,9 +228,35 @@ function renderPublicAlbum(){
  const item=items.find(x=>x.id===itemId());if(!item){app.innerHTML='<p class="empty">자료를 찾을 수 없습니다.</p><a class="back" href="#/">← 목록</a>';return}
  app.innerHTML=`<div class="public-album-return"><button type="button" class="secondary" data-reopen>사진 보기</button>${floatingBack('#/','분류로 돌아가기')}</div>`;
  app.querySelector('[data-reopen]').onclick=()=>{if(item.images?.length)showViewer(item,0,{returnToHub:true})};
- if(item.images?.length)showViewer(item,0,{returnToHub:true});else app.querySelector('[data-reopen]').textContent='사진이 없어요';
+ if(item.images?.length)showViewer(item,Math.min(sharedSlideIndex(),item.images.length-1),{returnToHub:true});else app.querySelector('[data-reopen]').textContent='사진이 없어요';
 }
-async function shareToolboxItem(item){try{const url=new URL(location.href);url.searchParams.delete('manage');url.searchParams.delete('maintenance');url.hash='#/'+item.id;if(navigator.share)await navigator.share({title:item.title,url:url.href});else{await navigator.clipboard.writeText(url.href);notify('주소를 복사했어요')}}catch(e){if(e.name!=='AbortError')notify('주소를 복사하지 못했어요')}}
+let activeShareDialog=null,qrLoader=null;
+function loadQrGenerator(){
+ if(window.qrcode)return Promise.resolve(window.qrcode);
+ if(!qrLoader)qrLoader=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='../vendor/qrcode-generator/qrcode-2.0.4.js';script.onload=()=>window.qrcode?resolve(window.qrcode):reject(Error('QR 코드를 불러오지 못했어요.'));script.onerror=()=>{script.remove();reject(Error('QR 코드를 불러오지 못했어요.'))};document.head.append(script)}).catch(error=>{qrLoader=null;throw error});
+ return qrLoader;
+}
+function toolboxShareUrl(item,index=0){const url=new URL(location.pathname,location.origin);url.hash='/'+item.id+(index>0?'?slide='+(index+1):'');return url.href}
+async function copyShareUrl(url){
+ if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(url);return true}catch{}}
+ const input=document.createElement('textarea');input.value=url;input.setAttribute('readonly','');input.style.cssText='position:fixed;left:-9999px;top:0';document.body.append(input);input.select();let copied=false;try{copied=document.execCommand('copy')}catch{}input.remove();return copied;
+}
+function shareToolboxItem(item,index=0,host=document.body){
+ if(item.published===false){notify('공개된 자료를 공유할 수 있어요');return}
+ const url=toolboxShareUrl(item,index),previous=document.activeElement;
+ if(activeShareDialog?.open)activeShareDialog.close();activeShareDialog?.remove();
+ const sheet=document.createElement('dialog');activeShareDialog=sheet;sheet.className='toolbox-share-dialog';sheet.setAttribute('aria-labelledby','toolbox-share-title');sheet.innerHTML=`<div class="share-sheet"><header class="share-sheet-head"><h2 id="toolbox-share-title">공유</h2><button type="button" class="share-close" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header><p class="share-item-title">${esc(item.title)}</p><div class="share-qr-wrap"><div class="share-qr" role="img" aria-label="사진을 여는 QR 코드"><canvas></canvas><span class="share-qr-status">QR 코드 준비 중</span></div></div><p class="share-qr-label">QR 코드로 열기</p><div class="share-actions"><button type="button" class="share-action share-copy"><span class="share-action-icon share-copy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></span><span>링크 복사</span></button><button type="button" class="share-action share-kakao"><span class="share-action-icon share-kakao-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 9C12.95 9 4 15.8 4 24.2c0 5.33 3.61 10.02 9.06 12.73l-1.7 6.1c-.15.52.45.94.9.64l7.22-4.8c1.45.25 2.97.38 4.52.38 11.05 0 20-6.8 20-15.05S35.05 9 24 9Z"/><text x="24" y="28.3" text-anchor="middle">TALK</text></svg></span><span>카카오톡</span></button></div><p class="share-feedback" role="status" aria-live="polite"></p><input class="share-url-fallback" aria-label="공유 주소" readonly hidden></div>`;
+ host.append(sheet);sheet.showModal();
+ const shareToken=crypto.randomUUID();let shareHistory=false;try{history.pushState({...history.state,toolboxShare:shareToken},'',location.href);shareHistory=true}catch{}
+ function shareBack(event){if(event.state?.toolboxShare!==shareToken&&sheet.open)sheet.close()}
+ window.addEventListener('popstate',shareBack);
+ sheet.addEventListener('close',()=>{window.removeEventListener('popstate',shareBack);if(shareHistory&&history.state?.toolboxShare===shareToken)history.back();if(activeShareDialog===sheet)activeShareDialog=null;sheet.remove();if(previous?.isConnected)previous.focus({preventScroll:true})},{once:true});sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.close()});sheet.querySelector('.share-close').onclick=()=>sheet.close();
+ const feedback=sheet.querySelector('.share-feedback');function showUrl(){const field=sheet.querySelector('.share-url-fallback');field.value=url;field.hidden=false;field.focus();field.select()}
+ sheet.querySelector('.share-copy').onclick=async()=>{if(await copyShareUrl(url))feedback.textContent='링크를 복사했어요';else{feedback.textContent='주소를 길게 눌러 복사해 주세요';showUrl()}};
+ sheet.querySelector('.share-kakao').onclick=async()=>{if(navigator.share){feedback.textContent='공유 창에서 카카오톡을 선택해 주세요';try{await navigator.share({title:item.title,url})}catch(error){if(error.name!=='AbortError'){feedback.textContent='공유 창을 열지 못했어요. 링크를 복사해 주세요';showUrl()}}}else if(await copyShareUrl(url)){feedback.textContent='링크를 복사했어요. 카카오톡에 붙여 넣어 주세요'}else{feedback.textContent='주소를 복사해 카카오톡에 붙여 넣어 주세요';showUrl()}};
+ loadQrGenerator().then(makeQr=>{if(!sheet.isConnected)return;const qr=makeQr(0,'M');qr.addData(url);qr.make();const count=qr.getModuleCount(),quiet=4,scale=8,canvas=sheet.querySelector('canvas');canvas.width=canvas.height=(count+quiet*2)*scale;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#142b1c';for(let row=0;row<count;row++)for(let col=0;col<count;col++)if(qr.isDark(row,col))ctx.fillRect((col+quiet)*scale,(row+quiet)*scale,scale,scale);sheet.querySelector('.share-qr-status').hidden=true}).catch(()=>{const status=sheet.querySelector('.share-qr-status');if(status)status.textContent='QR 코드를 불러오지 못했어요';});
+}
+
 let quillPromise=null;
 function loadQuill(){
  if(window.Quill)return Promise.resolve(window.Quill);if(quillPromise)return quillPromise;
@@ -407,17 +434,17 @@ function showViewer(item,index,{returnToHub=false}={}){
  function draw(){
   lastViewed.set(item.id,viewerIndex);el.classList.toggle('hidden-ui',viewerHidden);const multiple=item.images.length>1;
   el.innerHTML=`<div class="viewer-head"><div class="viewer-head-actions">${icon('star',stars.includes(item.id)?'즐겨찾기 해제':'즐겨찾기',stars.includes(item.id)?'active':'')}${icon('share','공유')}</div>${icon('close','닫기')}</div><div class="viewer-image"><img data-path="${esc(item.images[viewerIndex])}" data-fallback="사진을 불러오지 못했어요" alt="${esc(item.title)} ${viewerIndex+1}"><button type="button" class="viewer-retry" hidden>다시 시도</button></div><div class="viewer-foot">${multiple?`${icon('left','이전 사진')}<span class="viewer-count" aria-label="${viewerIndex+1} / ${item.images.length}번째 사진">${viewerIndex+1} / ${item.images.length}</span>${icon('right','다음 사진')}`:''}</div>${item.landscape_enabled?icon('rotate','가로 보기','viewer-orientation'):''}`;
-  const image=el.querySelector('.viewer-image img'),retry=el.querySelector('.viewer-retry');image.addEventListener('toolbox-image-error',()=>{retry.hidden=false});retry.onclick=e=>{e.stopPropagation();retry.hidden=true;urlCache.delete(image.dataset.path);loadImage(image)};fillImages(el);prefetch();el.querySelector('[data-action=close]').onclick=close;el.querySelector('[data-action=star]').onclick=()=>{stars=stars.includes(item.id)?stars.filter(id=>id!==item.id):[...stars,item.id];starSave();starsChanged=true;const button=el.querySelector('[data-action=star]'),active=stars.includes(item.id);button.classList.toggle('active',active);button.setAttribute('aria-label',active?'즐겨찾기 해제':'즐겨찾기');button.title=active?'즐겨찾기 해제':'즐겨찾기'};el.querySelector('[data-action=share]').onclick=()=>shareToolboxItem(item);el.querySelector('[data-action=rotate]')?.addEventListener('click',toggleLandscape);updateOrientationButton();
+  const image=el.querySelector('.viewer-image img'),retry=el.querySelector('.viewer-retry');image.addEventListener('toolbox-image-error',()=>{retry.hidden=false});retry.onclick=e=>{e.stopPropagation();retry.hidden=true;urlCache.delete(image.dataset.path);loadImage(image)};fillImages(el);prefetch();el.querySelector('[data-action=close]').onclick=close;el.querySelector('[data-action=star]').onclick=()=>{stars=stars.includes(item.id)?stars.filter(id=>id!==item.id):[...stars,item.id];starSave();starsChanged=true;const button=el.querySelector('[data-action=star]'),active=stars.includes(item.id);button.classList.toggle('active',active);button.setAttribute('aria-label',active?'즐겨찾기 해제':'즐겨찾기');button.title=active?'즐겨찾기 해제':'즐겨찾기'};el.querySelector('[data-action=share]').onclick=()=>shareToolboxItem(item,viewerIndex,host);el.querySelector('[data-action=rotate]')?.addEventListener('click',toggleLandscape);updateOrientationButton();
   const previous=el.querySelector('[data-action=left]'),next=el.querySelector('[data-action=right]');if(previous&&next){previous.disabled=viewerIndex===0;next.disabled=viewerIndex===item.images.length-1;previous.onclick=()=>{if(viewerIndex>0){viewerIndex--;draw()}};next.onclick=()=>{if(viewerIndex<item.images.length-1){viewerIndex++;draw()}}}
   const area=el.querySelector('.viewer-image');area.onclick=()=>{if(Date.now()<suppressClickUntil)return;viewerHidden=!viewerHidden;el.classList.toggle('hidden-ui',viewerHidden)};
   area.ontouchstart=e=>{startTouch=e.touches.length===1&&(!window.visualViewport||window.visualViewport.scale<=1.05)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null};
   area.ontouchend=e=>{if(!startTouch||e.changedTouches.length!==1||e.touches.length)return;const rawX=e.changedTouches[0].clientX-startTouch.x,rawY=e.changedTouches[0].clientY-startTouch.y,rotated=getComputedStyle(el).getPropertyValue('--manual-landscape').trim()==='1';let dx=rotated?rawY:rawX,dy=rotated?-rawX:rawY;startTouch=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){suppressClickUntil=Date.now()+400;const target=Math.max(0,Math.min(item.images.length-1,viewerIndex+(dx<0?1:-1)));if(target!==viewerIndex){viewerIndex=target;draw()}}};
  }
- function key(e){if(modal.open)return;if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='ArrowRight'&&viewerIndex<item.images.length-1){viewerIndex++;draw()}if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;draw()}}
+ function key(e){if(modal.open||activeShareDialog?.open)return;if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='ArrowRight'&&viewerIndex<item.images.length-1){viewerIndex++;draw()}if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;draw()}}
  document.addEventListener('keydown',key);draw();el.querySelector('[data-action=close]').focus({preventScroll:true});enterViewerFullscreen();
 }
 modal.addEventListener('close',()=>scheduleThumbnailBackfill());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleThumbnailBackfill()});
 window.addEventListener('resize',()=>fitTileTitles(app));
-window.addEventListener('hashchange',e=>{const oldHash=new URL(e.oldURL).hash,fromItem=/^#\/[0-9a-f-]{36}$/i.test(oldHash);render();const position=itemId()?0:listRoute()?(fromItem?savedScroll:0):hubScroll;requestAnimationFrame(()=>window.scrollTo(0,position))});
+window.addEventListener('hashchange',e=>{const oldHash=new URL(e.oldURL).hash,fromItem=/^#\/[0-9a-f-]{36}(?:\?[^#]*)?$/i.test(oldHash);render();const position=itemId()?0:listRoute()?(fromItem?savedScroll:0):hubScroll;requestAnimationFrame(()=>window.scrollTo(0,position))});
 (async()=>{try{await checkAdmin();if(!managing||admin)await refresh();render();if(managing&&!admin)login()}catch(e){app.innerHTML='<p class="empty">자료를 불러오지 못했어요.</p><button class="secondary" onclick="location.reload()">다시 시도</button>'}})();

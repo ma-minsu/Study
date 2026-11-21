@@ -230,7 +230,17 @@ function renderPublicAlbum(){
  app.querySelector('[data-reopen]').onclick=()=>{if(item.images?.length)showViewer(item,0,{returnToHub:true})};
  if(item.images?.length)showViewer(item,Math.min(sharedSlideIndex(),item.images.length-1),{returnToHub:true});else app.querySelector('[data-reopen]').textContent='사진이 없어요';
 }
-let activeShareDialog=null,qrLoader=null;
+let activeShareDialog=null,qrLoader=null,kakaoLoader=null;
+const KAKAO_JAVASCRIPT_KEY='dc2fac74e4bcb9c4226b10b6fa6f9a5c';
+function loadKakaoShare(){
+ if(kakaoLoader)return kakaoLoader;
+ kakaoLoader=new Promise((resolve,reject)=>{
+  function ready(){try{if(!window.Kakao?.init)throw Error('카카오톡 공유를 불러오지 못했어요.');if(!window.Kakao.isInitialized())window.Kakao.init(KAKAO_JAVASCRIPT_KEY);if(!window.Kakao.Share?.sendDefault)throw Error('카카오톡 공유를 불러오지 못했어요.');resolve(window.Kakao)}catch(error){reject(error)}}
+  if(window.Kakao){ready();return}
+  const script=document.createElement('script');let timeout;function failed(){clearTimeout(timeout);script.remove();reject(Error('카카오톡 공유를 불러오지 못했어요.'))}
+  script.src='https://t1.kakaocdn.net/kakao_js_sdk/2.7.5/kakao.min.js';script.integrity='sha384-dok87au0gKqJdxs7msEdBPNnKSRT+/mhTVzq+qOhcL464zXwvcrpjeWvyj1kCdq6';script.crossOrigin='anonymous';script.onload=()=>{clearTimeout(timeout);ready()};script.onerror=failed;timeout=setTimeout(failed,10000);document.head.append(script);
+ }).catch(error=>{kakaoLoader=null;throw error});return kakaoLoader;
+}
 function loadQrGenerator(){
  if(window.qrcode)return Promise.resolve(window.qrcode);
  if(!qrLoader)qrLoader=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='../vendor/qrcode-generator/qrcode-2.0.4.js';script.onload=()=>window.qrcode?resolve(window.qrcode):reject(Error('QR 코드를 불러오지 못했어요.'));script.onerror=()=>{script.remove();reject(Error('QR 코드를 불러오지 못했어요.'))};document.head.append(script)}).catch(error=>{qrLoader=null;throw error});
@@ -253,7 +263,9 @@ function shareToolboxItem(item,index=0,host=document.body){
  sheet.addEventListener('close',()=>{window.removeEventListener('popstate',shareBack);if(shareHistory&&history.state?.toolboxShare===shareToken)history.back();if(activeShareDialog===sheet)activeShareDialog=null;sheet.remove();if(previous?.isConnected)previous.focus({preventScroll:true})},{once:true});sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.close()});sheet.querySelector('.share-close').onclick=()=>sheet.close();
  const feedback=sheet.querySelector('.share-feedback');function showUrl(){const field=sheet.querySelector('.share-url-fallback');field.value=url;field.hidden=false;field.focus();field.select()}
  sheet.querySelector('.share-copy').onclick=async()=>{if(await copyShareUrl(url))feedback.textContent='링크를 복사했어요';else{feedback.textContent='주소를 길게 눌러 복사해 주세요';showUrl()}};
- sheet.querySelector('.share-kakao').onclick=async()=>{if(navigator.share){feedback.textContent='공유 창에서 카카오톡을 선택해 주세요';try{await navigator.share({title:item.title,url})}catch(error){if(error.name!=='AbortError'){feedback.textContent='공유 창을 열지 못했어요. 링크를 복사해 주세요';showUrl()}}}else if(await copyShareUrl(url)){feedback.textContent='링크를 복사했어요. 카카오톡에 붙여 넣어 주세요'}else{feedback.textContent='주소를 복사해 카카오톡에 붙여 넣어 주세요';showUrl()}};
+ const kakaoButton=sheet.querySelector('.share-kakao');let kakaoShare=null;kakaoButton.disabled=true;kakaoButton.setAttribute('aria-busy','true');loadKakaoShare().then(kakao=>{kakaoShare=kakao}).catch(()=>{}).finally(()=>{if(sheet.isConnected){kakaoButton.disabled=false;kakaoButton.removeAttribute('aria-busy')}});
+ async function fallbackShare(){if(navigator.share){feedback.textContent='공유 창에서 카카오톡을 선택해 주세요';try{await navigator.share({title:item.title,url})}catch(error){if(error.name!=='AbortError'){feedback.textContent='공유 창을 열지 못했어요. 링크를 복사해 주세요';showUrl()}}}else if(await copyShareUrl(url)){feedback.textContent='링크를 복사했어요. 카카오톡에 붙여 넣어 주세요'}else{feedback.textContent='주소를 복사해 카카오톡에 붙여 넣어 주세요';showUrl()}}
+ kakaoButton.onclick=()=>{if(kakaoShare){try{kakaoShare.Share.sendDefault({objectType:'text',text:item.title,link:{mobileWebUrl:url,webUrl:url},buttonTitle:'사진 보기'});feedback.textContent='';return}catch{}}fallbackShare()};
  loadQrGenerator().then(makeQr=>{if(!sheet.isConnected)return;const qr=makeQr(0,'M');qr.addData(url);qr.make();const count=qr.getModuleCount(),quiet=4,scale=8,canvas=sheet.querySelector('canvas');canvas.width=canvas.height=(count+quiet*2)*scale;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#142b1c';for(let row=0;row<count;row++)for(let col=0;col<count;col++)if(qr.isDark(row,col))ctx.fillRect((col+quiet)*scale,(row+quiet)*scale,scale,scale);sheet.querySelector('.share-qr-status').hidden=true}).catch(()=>{const status=sheet.querySelector('.share-qr-status');if(status)status.textContent='QR 코드를 불러오지 못했어요';});
 }
 

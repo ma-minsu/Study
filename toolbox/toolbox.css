@@ -164,3 +164,5 @@ photo-edit.dragging{opacity:.5}.photo-edit.drop-target .photo-preview{outline:3p
 .share-url-fallback{width:100%;padding:9px 10px;border:1px solid #d5e1d3;border-radius:9px;background:#fff;color:#405747;font-size:13px}
 .share-url-fallback[hidden]{display:none}
 @media(max-height:600px){.share-sheet{padding-top:12px;padding-bottom:12px}.share-qr{width:min(43vh,190px)}.share-qr-wrap{margin:6px 0 10px}.share-actions{padding-top:10px}.share-feedback{margin-top:6px}}
+
+.share-kakao:disabled{opacity:.55;cursor:wait}

@@ -166,3 +166,6 @@ photo-edit.dragging{opacity:.5}.photo-edit.drop-target .photo-preview{outline:3p
 @media(max-height:600px){.share-sheet{padding-top:12px;padding-bottom:12px}.share-qr{width:min(43vh,190px)}.share-qr-wrap{margin:6px 0 10px}.share-actions{padding-top:10px}.share-feedback{margin-top:6px}}
 
 .share-kakao:disabled{opacity:.55;cursor:wait}
+
+/* Show the already visible matching cover while the full slide loads. */
+.viewer-image .viewer-quick-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:0}.viewer-image>img[data-path]{position:relative;z-index:1}.viewer-image .viewer-retry{z-index:2}

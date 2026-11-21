@@ -1,0 +1,185 @@
+.personal-add-sheet{overscroll-behavior:contain}
+.personal-edit-dialog.personal-add-sheet{width:min(92vw,500px);padding:26px;border-radius:22px}
+.personal-add-sheet .personal-edit-form{gap:19px}
+.personal-add-sheet .personal-edit-head{margin-bottom:2px}
+.personal-add-sheet .personal-edit-form label:not(.personal-approx){gap:9px;font-weight:600}
+.personal-add-sheet .personal-edit-form input:not([type=checkbox]),.personal-add-sheet .personal-edit-form select{min-height:52px;border-radius:12px;font-size:16px;font-weight:400}
+.personal-add-sheet .personal-edit-form .primary{min-height:52px;border-radius:12px}
+.personal-add-hint{margin:0 0 9px;color:#718378;font-size:12px;font-weight:500}
+.personal-add-suggestions,.personal-add-matches{min-width:0}
+.personal-add-chips{display:flex;flex-wrap:wrap;gap:8px}
+.personal-add-chips button{min-height:40px;padding:7px 14px;border:1px solid #d9e5d9;border-radius:22px;background:#eef3ec;color:#486950;font:inherit;font-size:14px}
+.personal-add-match-list{display:grid;border-top:1px solid #e0e8dc}
+.personal-add-match-list a{display:flex;align-items:center;justify-content:space-between;min-height:42px;color:#405e49;text-decoration:none;font-size:14px;border-bottom:1px solid #e0e8dc}
+.personal-add-match-list a span{color:#708879;font-size:12px}
+.personal-add-optional summary{min-height:42px;display:flex;align-items:center;gap:7px;color:#5e7866;font-size:14px;cursor:pointer}
+.personal-add-optional summary span{font-size:12px;color:#8b9b8c}
+.personal-add-optional[open] summary{margin-bottom:8px}
+.personal-add-segments{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;background:#e9efe8;border-radius:13px}
+.personal-add-segments button{min-height:46px;border:0;border-radius:10px;background:transparent;color:#708477;font:inherit;font-size:14px}
+.personal-add-segments button[aria-pressed=true]{background:#fff;color:#365c43;box-shadow:0 1px 5px #2949321a;font-weight:650}
+.personal-add-native-select{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;opacity:0;pointer-events:none}
+.personal-add-validation{margin:-8px 0 0;font-size:13px;line-height:1.5;color:#708577}
+.personal-add-validation:empty,.personal-add-matches:empty,.personal-add-suggestions:empty{display:none}
+.personal-add-validation a{color:#446f53;text-underline-offset:3px}
+.personal-add-sheet .ts-wrapper{font-weight:400}
+.personal-add-sheet .ts-wrapper.single .ts-control,.personal-add-sheet .ts-control{min-height:52px;display:flex;align-items:center;padding:12px;border:1px solid #d0ddcf;border-radius:12px;background:#fff;box-shadow:none;font-size:16px}
+.personal-add-sheet .ts-control input{min-height:0!important;padding:0!important;border:0!important;font-size:16px!important}
+.personal-add-sheet .ts-dropdown{border:1px solid #d0ddcf;border-radius:12px;box-shadow:0 8px 25px #253f2e1c;overflow:hidden;font-size:15px}
+.personal-add-sheet .ts-dropdown .option{padding:11px 12px}.personal-add-sheet .ts-dropdown .active{background:#eaf1e8;color:#365c43}
+.personal-person-add .personal-add-matches{margin:0 0 14px}.personal-person-add .personal-add-optional{margin:4px 0 12px}
+@media(max-width:600px){.personal-edit-dialog.personal-add-sheet{width:100%;max-width:none;max-height:min(88dvh,760px);margin:auto 0 0;padding:24px 24px max(24px,env(safe-area-inset-bottom));border-radius:24px 24px 0 0}.personal-add-sheet .ts-dropdown-content{max-height:180px}}
+/* Shared add-sheet structure and focused book lookup. */
+.personal-add-scripture summary{min-height:42px;display:flex;align-items:center;cursor:pointer;color:#53765c;font-size:14px;font-weight:600}
+.personal-add-scripture summary::before{content:'⌕';font-size:21px;margin-right:8px;line-height:1}
+.personal-add-scripture[open] summary{margin-bottom:8px}
+.personal-add-scripture .ts-dropdown-content{max-height:min(30dvh,220px)}
+#person-dialog.personal-person-add{background:#f8f9f4;color:#304b3a;max-width:500px;border-radius:22px}
+#person-dialog.personal-person-add .dialog-inner{position:relative;padding:26px}
+#person-dialog.personal-person-add .dialog-top{position:absolute;right:21px;top:20px}
+#person-dialog.personal-person-add .dialog-top .icon-button{width:44px;height:44px;background:transparent}
+#person-dialog.personal-person-add .dialog-top svg{width:24px;height:24px}
+#person-dialog.personal-person-add h2{font-size:20px;margin:4px 54px 0 0}
+#person-dialog.personal-person-add form{gap:19px;margin-top:25px}
+#person-dialog.personal-person-add form label{font-size:14px;color:#506a59;gap:9px}
+#person-dialog.personal-person-add input,#person-dialog.personal-person-add select{min-height:52px;border-radius:12px;font-size:16px;font-weight:400}
+#person-dialog.personal-person-add .primary{min-height:52px;border-radius:12px}
+.personal-add-sheet button:disabled{transition:opacity .2s}
+@media(max-width:600px){
+ #person-dialog.personal-person-add{width:100%;max-width:none;max-height:min(88dvh,760px);margin:auto 0 0;border-radius:24px 24px 0 0}
+ #person-dialog.personal-person-add .dialog-inner{padding:24px 24px max(24px,env(safe-area-inset-bottom))}
+ #edit-dialog.personal-note-editor{position:fixed;inset:0;margin:0;width:100%;max-width:none;height:100dvh;max-height:100dvh;border-radius:0;overflow-y:auto;overscroll-behavior:contain;background:#f8f9f4}
+ #edit-dialog.personal-note-editor .dialog-inner{min-height:100%;padding:22px 24px max(26px,env(safe-area-inset-bottom))}
+ #edit-dialog.personal-note-editor h2{font-size:21px;color:#304b3a}
+ #edit-dialog.personal-note-editor .dialog-top .icon-button{background:transparent}
+ #edit-dialog.personal-note-editor input,#edit-dialog.personal-note-editor select,#edit-dialog.personal-note-editor textarea{font-size:16px;border-radius:10px}
+ #edit-dialog.personal-note-editor #note-body{min-height:180px}
+ #edit-dialog.personal-note-editor .form-actions .primary{min-height:52px;border-radius:12px}
+}
+@keyframes personal-add-saving{0%,100%{opacity:.72}50%{opacity:1}}
+.personal-add-sheet .primary[aria-busy="true"],#edit-dialog.personal-note-editor .primary[aria-busy="true"]{animation:personal-add-saving 1.25s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.personal-add-sheet .primary[aria-busy="true"],#edit-dialog.personal-note-editor .primary[aria-busy="true"]{animation:none}}
+.personal-edit-form .personal-subject-delete{justify-self:center;min-height:44px;margin-top:10px;padding:8px 18px;border:0;background:transparent;color:#8b7068;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.personal-edit-form .personal-subject-delete:disabled{opacity:.55}
+.person-top{align-items:flex-start}
+.person-top>div:first-child{min-width:0;flex:1}
+.person-top h1{margin:0;min-height:44px;display:flex;align-items:center;flex-wrap:wrap;line-height:1.3}
+.person-top .person-actions{display:flex;align-items:center;flex:none;min-height:44px}
+/* Research reading and writing */
+.person-research .note{padding:22px 0 26px;border:0;border-bottom:1px solid #dce5da;border-radius:0;background:transparent}
+.person-research .note h3{font-size:18px;line-height:1.45;margin:12px 0;color:#2e4b39}
+.person-research .note-meta{gap:8px;font-size:12px;color:#77897c}
+.person-research .note-body{max-height:13.5em;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.85;color:#32463b}
+.person-research .note-body.expanded{max-height:none}
+.person-research .note-body.ql-container.ql-snow{border:0;font:inherit}
+.person-research .note-body .ql-editor{min-height:0;padding:0;font:inherit;line-height:inherit;white-space:pre-wrap}
+.person-research .note-body blockquote,.personal-note-editor .ql-editor blockquote{margin:12px 0;padding-left:14px;border-left:3px solid #b8cbb8;color:#597363}
+.person-research .note-expand{border:0;background:none;padding:8px 0;color:#52775b;font:inherit;font-size:13px;font-weight:600}
+.person-research .note-actions{margin-top:12px;padding-top:0;border:0;gap:8px}
+.person-research .personal-note-links{margin-top:14px}
+.personal-note-editor .research-toolbar.ql-toolbar.ql-snow{display:flex;gap:4px;border:1px solid #d4e1d3;border-bottom:0;border-radius:10px 10px 0 0;background:#f0f4ed;padding:5px}
+.personal-note-editor .research-toolbar button{width:40px;height:40px;padding:9px}
+.personal-note-editor .research-editor.ql-container.ql-snow{border:1px solid #d4e1d3;border-radius:0 0 10px 10px;background:white;font:inherit}
+.personal-note-editor .research-editor .ql-editor{min-height:190px;padding:14px;font-size:16px;line-height:1.75}
+.personal-note-editor .research-editor .ql-editor.ql-blank::before{left:14px;color:#84958a;font-style:normal}
+.personal-note-editor #note-edit-controls{display:grid;gap:8px;justify-items:center;margin:18px 0 4px}
+.personal-note-editor .research-delete,.personal-note-editor .research-connect{min-height:44px;padding:9px 16px;border:0;background:transparent;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:4px}
+.personal-note-editor .research-delete{color:#8b7068}.personal-note-editor .research-connect{color:#52775b}
+@media(max-width:600px){.personal-note-editor #note-form .form-actions{position:sticky;bottom:0;z-index:2;margin:0 -8px;padding:10px 8px max(10px,env(safe-area-inset-bottom));background:#f8f9f4;box-shadow:0 -8px 16px #f8f9f4ed}}
+.person-research .note-body.ql-container.ql-snow{height:auto}
+.personal-note-editor .research-editor.ql-container.ql-snow{height:auto}
+.personal-note-editor #research-author-switch{display:flex;gap:7px}
+.personal-note-editor #research-author-switch button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;min-width:94px;padding:5px 12px;border:1px solid #dce6da;border-radius:12px;background:transparent;color:#657b6c;font:inherit;font-size:14px}
+.personal-note-editor #research-author-switch button[aria-pressed="true"]{border-color:#afc7b1;background:#e9f1e7;color:#365d43;font-weight:600}
+.personal-note-editor #research-author-switch .person-identity{width:27px;height:27px}
+/* A quieter research editor: the topic is the title and the fields speak for themselves. */
+.personal-note-editor .dialog-top{align-items:center;gap:16px;min-height:44px}
+.personal-note-editor .dialog-top h2{margin:0;min-width:0;flex:1;line-height:1.35;overflow-wrap:anywhere}
+.personal-note-editor .dialog-top .icon-button{flex:none;display:grid;place-items:center;min-width:44px;min-height:44px}
+.personal-note-editor .dialog-top .icon-button svg{width:22px;height:22px}
+.personal-note-editor .editor-privacy,.personal-note-editor .draft-help p,.personal-note-editor .image-field>small,.personal-note-editor #image-help{display:none}
+.personal-note-editor .research-field-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.personal-note-editor #note-form{margin-top:24px}
+.personal-note-editor #note-form .additional{padding:0;border:0;border-radius:0}
+.personal-note-editor #note-form .additional>summary{display:none}
+.personal-note-editor #note-form .additional .extra-fields{padding-top:0;gap:15px}
+.personal-note-editor .draft-help{justify-content:flex-end}
+/* Reference pairs and photo previews in the research editor. */
+.personal-note-editor #research-reference-fields{display:grid;gap:9px}
+.personal-note-editor .research-verse-rows,.personal-note-editor .research-resource-rows{display:grid;gap:9px}
+.personal-note-editor .research-reference-row,.personal-note-editor .research-resource-head{display:flex;align-items:center;gap:5px}
+.personal-note-editor .research-reference-row input,.personal-note-editor .research-resource-head input{min-width:0;flex:1}
+.personal-note-editor .research-reference-row button,.personal-note-editor .research-resource-head button{flex:none;width:44px;height:44px;border:0;background:transparent;color:#728779;font-size:25px;line-height:1}
+.personal-note-editor .research-resource-pair{display:grid;gap:8px;padding:12px;border:1px solid #dce6d9;border-radius:13px;background:#f0f4ed}
+.personal-note-editor .research-reference-add{justify-self:start;min-height:42px;padding:6px 3px;border:0;background:transparent;color:#57765e;font:inherit;font-size:13px;font-weight:600}
+.personal-note-editor .research-resource-rows{margin-top:10px}
+.person-research .note-scriptures,.person-research .note-resources{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.person-research .note-resources .ref-link,.person-research .note-resources .ref-name{display:inline-flex;align-items:center;min-height:40px;margin:0;padding:5px 10px;border-radius:9px;background:#edf3eb;color:#45674f;font-size:13px;text-decoration:none;overflow-wrap:anywhere}
+.personal-note-editor #image-previews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.personal-note-editor .research-photo{min-width:0}
+.personal-note-editor .research-photo-frame{position:relative;overflow:hidden;border-radius:13px;background:#e7ede5;aspect-ratio:4/3}
+.personal-note-editor .research-photo-open{display:block;width:100%;height:100%;padding:0;border:0;background:none}
+.personal-note-editor .research-photo-open img{display:block;width:100%;height:100%;object-fit:contain}
+.personal-note-editor .research-photo-remove{position:absolute;top:5px;right:5px;display:grid;place-items:center;width:42px;height:42px;border:0;border-radius:50%;background:#26372dc9;color:white;font-size:24px;line-height:1}
+.personal-note-editor .research-photo-order{display:flex;align-items:center;justify-content:center;gap:9px;color:#708477;font-size:12px}
+.personal-note-editor .research-photo-order button{width:42px;height:42px;border:0;background:transparent;color:#58735f;font-size:26px;line-height:1}
+.personal-note-editor .research-photo-order button:disabled{opacity:.25}
+.personal-note-editor .research-photo-caption summary{min-height:40px;display:flex;align-items:center;color:#718477;font-size:12px;cursor:pointer}
+.personal-note-editor .research-photo-caption input{width:100%;font-size:16px}
+.person-research .note-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.person-research .note-image{width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:12px;background:#e7ede5}
+.personal-note-editor .extra-fields>label[hidden]{display:none!important}
+/* Compact add controls and a single, vertical photo flow. */
+.personal-note-editor #research-reference-fields{gap:12px}
+.personal-note-editor .research-resource-url{display:flex;align-items:center;gap:5px}
+.personal-note-editor .research-resource-url input{flex:1;min-width:0}
+.personal-note-editor .research-reference-icon,.personal-note-editor .research-resource-url .research-reference-icon{flex:none;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:#587862;font:inherit;font-size:24px;line-height:1}
+.personal-note-editor .research-ref-spacer{display:block;flex:none;width:44px;height:44px}
+.personal-note-editor .research-resource-rows{margin-top:4px}
+.personal-note-editor #image-previews{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.personal-note-editor .research-photo{min-width:0}
+.personal-note-editor .research-photo-frame{position:relative;aspect-ratio:auto;min-height:120px;overflow:hidden;border-radius:14px;background:#e7ede5;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.personal-note-editor .research-photo-open{display:block;width:100%;height:auto;padding:0;border:0;background:transparent;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.personal-note-editor .research-photo-open img{display:block;width:100%;height:auto;max-height:55dvh;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
+.personal-note-editor .research-photo-grip,.personal-note-editor .research-photo-remove{position:absolute;top:7px;display:grid;place-items:center;width:44px;height:44px;padding:10px;border:0;border-radius:50%;background:#26372dc9;color:#fff}
+.personal-note-editor .research-photo-grip{left:7px;touch-action:manipulation;cursor:grab}.personal-note-editor .research-photo-grip svg{width:22px;height:22px}
+.personal-note-editor .research-photo-remove{right:7px;font-size:24px;line-height:1}
+.personal-note-editor .research-photo-caption{display:block;width:100%;margin-top:8px;min-height:50px;border-radius:10px;font-size:16px}
+.personal-note-editor .research-photo-ghost{opacity:.35}.personal-note-editor .research-photo-chosen .research-photo-grip{cursor:grabbing}
+.personal-note-editor .research-sort-fallback{display:flex;justify-content:flex-end;gap:8px}.personal-note-editor .research-sort-fallback[hidden]{display:none}
+.personal-note-editor .research-sort-fallback button{width:44px;height:44px;border:0;background:transparent;color:#58735f;font-size:20px}
+.personal-note-editor .image-field[hidden]{display:none!important}
+.personal-note-editor .image-field-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.personal-note-editor .image-field .file-picker{display:flex;justify-content:center;align-items:center;width:100%;min-height:112px;border:1px dashed #bdcfbe;border-radius:14px;background:#f0f4ed;color:#57765e}
+/* Research editor: a calm writing surface and a separate, stable action area. */
+.personal-note-editor .research-form-content{display:grid;align-content:start;gap:16px;min-width:0}
+.personal-note-editor .dialog-top h2{font-size:19px;letter-spacing:-.02em}
+.personal-note-editor #research-author-switch{gap:2px;width:max-content;padding:3px;border-radius:14px;background:#edf2ea}
+.personal-note-editor #research-author-switch button{border:1px solid transparent;background:transparent;min-width:91px}
+.personal-note-editor #research-author-switch button[aria-pressed="true"]{background:#fff;border-color:#d9e5d8;box-shadow:0 1px 4px #25453112;color:#345a40}
+.personal-note-editor #note-title{border-color:#e0e8de;background:#fff;font-size:17px;font-weight:600}
+.personal-note-editor #research-quill-wrap{margin-top:-8px}
+.personal-note-editor .research-toolbar.ql-toolbar.ql-snow{gap:0;background:#f7f9f5;border-color:#dce6da}
+.personal-note-editor .research-toolbar.ql-toolbar.ql-snow button{width:44px;height:44px;padding:11px;flex:none}
+.personal-note-editor .research-editor.ql-container.ql-snow{border-color:#dce6da}
+.personal-note-editor .research-editor .ql-editor{min-height:165px}
+.personal-note-editor #research-reference-fields{gap:18px}
+.personal-note-editor .research-resource-rows{gap:14px;margin-top:0}
+.personal-note-editor .research-resource-pair{gap:7px;padding:10px;border-color:#e2eae0;background:#f7f9f5}
+.personal-note-editor [data-remove-verse],.personal-note-editor [data-remove-resource]{color:#86978b}
+.personal-note-editor [data-add-verse],.personal-note-editor [data-add-resource]{color:#416d4f}
+.personal-note-editor .research-photo-caption{margin-top:5px;border-color:#e1e9df;background:#fff}
+.personal-note-editor .research-photo-grip{background:#304638a6}
+.personal-note-editor .research-photo-chosen .research-photo-frame,.personal-note-editor .research-photo-floating .research-photo-frame{box-shadow:0 10px 24px #253b2d47;outline:2px solid #86a78d;outline-offset:-2px}
+.personal-note-editor .research-photo-floating{opacity:.96}
+.personal-note-editor .image-field .file-picker{background:#f5f8f2}
+@media(max-width:600px){
+ #edit-dialog.personal-note-editor{overflow:hidden}
+ #edit-dialog.personal-note-editor .dialog-inner{height:100%;min-height:0;display:flex;flex-direction:column;padding:22px 24px 0}
+ #edit-dialog.personal-note-editor .dialog-top{flex:none}
+ #edit-dialog.personal-note-editor #note-form{display:flex;flex:1;min-height:0;flex-direction:column;gap:0;margin-top:18px;padding:0}
+ #edit-dialog.personal-note-editor .research-form-content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-padding-bottom:20px;padding:0 0 22px}
+ #edit-dialog.personal-note-editor #note-form .form-actions{position:static;flex:none;z-index:auto;margin:0;padding:10px 0 max(10px,env(safe-area-inset-bottom));background:#f8f9f4;box-shadow:0 -2px 8px #263d2a0a}
+ #edit-dialog.personal-note-editor .research-form-content input,#edit-dialog.personal-note-editor .research-form-content textarea,#edit-dialog.personal-note-editor .research-form-content .ql-editor{scroll-margin-block:20px}
+}
+@media(prefers-reduced-motion:reduce){.personal-note-editor .research-photo-chosen .research-photo-frame,.personal-note-editor .research-photo-floating .research-photo-frame{transition:none}}

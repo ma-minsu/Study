@@ -169,3 +169,10 @@ photo-edit.dragging{opacity:.5}.photo-edit.drop-target .photo-preview{outline:3p
 
 /* Show the already visible matching cover while the full slide loads. */
 .viewer-image .viewer-quick-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:0}.viewer-image>img[data-path]{position:relative;z-index:1}.viewer-image .viewer-retry{z-index:2}
+
+/* The same couple animation used when the toolbox opens, shown while a photo loads. */
+.viewer-image>.toolbox-image-loader,.tile-visual>.toolbox-image-loader,.cover>.toolbox-image-loader,.photo-preview>.toolbox-image-loader,.slide-note-thumb>.toolbox-image-loader,.slide-note-review-card>.toolbox-image-loader{position:absolute;z-index:3;display:block;left:50%;top:50%;right:auto;bottom:auto;width:64px;height:64px;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;transform:translate(-50%,-50%);pointer-events:none}
+.toolbox-image-loader::after{content:'';display:block;width:100%;height:100%;background:url('../assets/couple-line-avatars-20261030.webp') center/contain no-repeat;animation:spin 1.8s linear infinite}
+.viewer-image.has-quick-preview>.toolbox-image-loader{top:auto;left:auto;right:16px;bottom:16px;width:44px;height:44px;padding:5px;border-radius:50%;background:#f8faf4e8;box-shadow:0 2px 12px #101c1533;transform:none}
+.photo-preview>.toolbox-image-loader{width:54px;height:54px}.slide-note-thumb>.toolbox-image-loader{width:40px;height:40px}.slide-note-review-card{position:relative}.slide-note-review-card>.toolbox-image-loader{left:46px;top:46px;width:42px;height:42px}
+@media(prefers-reduced-motion:reduce){.toolbox-image-loader::after{animation:none}}

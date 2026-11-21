@@ -52,8 +52,20 @@ function preloadImage(path){
  const existing=preloadedImages.get(path);if(existing&&existing.until>Date.now()||preloadingImages.has(path))return;preloadingImages.add(path);
  signed(path).then(url=>{const img=new Image();img.decoding='async';if('fetchPriority' in img)img.fetchPriority='low';img.onerror=()=>preloadedImages.delete(path);img.src=url;preloadedImages.delete(path);preloadedImages.set(path,{img,until:Date.now()+3300000});while(preloadedImages.size>4)preloadedImages.delete(preloadedImages.keys().next().value)}).catch(()=>{}).finally(()=>preloadingImages.delete(path));
 }
-const imagePendingTimers=new WeakMap();
-function imagePending(img,pending){const parent=img.parentElement;if(pending){img.dataset.loading='true';parent?.classList.remove('image-failed');parent?.setAttribute('aria-busy','true');if(!imagePendingTimers.has(img)){const timer=setTimeout(()=>{imagePendingTimers.delete(img);if(img.isConnected&&img.dataset.loading==='true')img.parentElement?.classList.add('image-pending')},250);imagePendingTimers.set(img,timer)}}else{delete img.dataset.loading;const timer=imagePendingTimers.get(img);if(timer)clearTimeout(timer);imagePendingTimers.delete(img);parent?.classList.remove('image-pending');parent?.removeAttribute('aria-busy')}}
+const imagePendingTimers=new WeakMap(),imageLoadingIndicators=new WeakMap();
+function showImageLoadingIndicator(img){
+ const parent=img.parentElement;if(!parent?.matches('.viewer-image,.tile-visual,.cover,.photo-preview,.slide-note-thumb,.slide-note-review-card')||imageLoadingIndicators.has(img))return;
+ const indicator=document.createElement('span');indicator.className='toolbox-image-loader';indicator.setAttribute('role','status');indicator.setAttribute('aria-label','사진을 불러오는 중');parent.append(indicator);imageLoadingIndicators.set(img,indicator);
+}
+function imagePending(img,pending){
+ const parent=img.parentElement;
+ if(pending){
+  img.dataset.loading='true';parent?.classList.remove('image-failed');parent?.setAttribute('aria-busy','true');
+  if(!imagePendingTimers.has(img)){const timer=setTimeout(()=>{imagePendingTimers.delete(img);if(img.isConnected&&img.dataset.loading==='true'){img.parentElement?.classList.add('image-pending');showImageLoadingIndicator(img)}},250);imagePendingTimers.set(img,timer)}
+ }else{
+  delete img.dataset.loading;const timer=imagePendingTimers.get(img);if(timer)clearTimeout(timer);imagePendingTimers.delete(img);imageLoadingIndicators.get(img)?.remove();imageLoadingIndicators.delete(img);parent?.classList.remove('image-pending');parent?.removeAttribute('aria-busy');
+ }
+}
 function imageLoaded(img){imagePending(img,false);if('originalAlt' in img.dataset){img.alt=img.dataset.originalAlt;delete img.dataset.originalAlt}const tile=img.closest('.tile'),cover=img.closest('.cover');if(tile)tile.removeAttribute('aria-label');if(cover)cover.setAttribute('aria-label','사진 보기')}
 function imageFailed(img){if(!img.isConnected)return;const original=img.dataset.originalPath;if(original&&img.dataset.path!==original){urlCache.delete(img.dataset.path);img.dataset.path=original;loadImage(img);return}imagePending(img,false);img.parentElement?.classList.add('image-failed');if(!('originalAlt' in img.dataset))img.dataset.originalAlt=img.alt;img.alt=img.dataset.fallback||'이미지를 불러오지 못했습니다.';const tile=img.closest('.tile'),cover=img.closest('.cover');if(tile)tile.setAttribute('aria-label',(img.dataset.fallback||'사진')+' 사진 다시 불러오기');if(cover)cover.setAttribute('aria-label','사진 다시 불러오기');img.dispatchEvent(new Event('toolbox-image-error'))}
 
@@ -454,7 +466,7 @@ function showViewerQuickPreview(item,index,image){
  if(!source?.complete||!source.naturalWidth||!source.naturalHeight||![item.cover_thumbnail,item.cover].includes(source.dataset.path))return;
  try{
   const preview=document.createElement('canvas');preview.className='viewer-quick-preview';preview.setAttribute('aria-hidden','true');preview.width=source.naturalWidth;preview.height=source.naturalHeight;
-  const context=preview.getContext('2d');if(!context)return;context.drawImage(source,0,0);image.before(preview);image.addEventListener('load',()=>preview.remove(),{once:true});
+  const context=preview.getContext('2d');if(!context)return;context.drawImage(source,0,0);image.before(preview);const area=image.parentElement;area?.classList.add('has-quick-preview');image.addEventListener('load',()=>{preview.remove();area?.classList.remove('has-quick-preview')},{once:true});
  }catch{}
 }
 function showViewer(item,index,{returnToHub=false}={}){

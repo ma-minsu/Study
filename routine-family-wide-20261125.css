@@ -1,0 +1,49 @@
+/* Use the available width for dates without clipping the first or last day. */
+@media (min-width: 700px) {
+  .routine .day-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+    gap: 6px;
+    overflow: visible;
+    padding: 3px 0 6px;
+  }
+  .routine .day-strip button { width: 100%; min-width: 0; }
+}
+@media (min-width: 1000px) {
+  .routine { max-width: 940px; }
+}
+
+/* Keep empty and upcoming-only screens compact. Expand only when there is
+   related history or a photo and another populated section to show. */
+@media (min-width: 1100px) {
+  .family-page:has(.family-history) {
+    max-width: 940px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 44px;
+    align-items: start;
+  }
+  .family-page:has(.family-history) .family-head { grid-column: 1 / -1; }
+  .family-page:has(.family-history) .family-next {
+    grid-column: 1;
+    grid-row: 2 / span 2;
+    align-self: start;
+  }
+  .family-page:has(.family-history) .family-history { grid-column: 2; min-width: 0; }
+  .family-page:has(.family-history) .family-history:first-of-type { margin-top: 0; }
+
+  .family-detail[data-wide-content="true"] {
+    max-width: 940px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'notice notice' 'heading heading' 'people people' 'plan record';
+    column-gap: 44px;
+    align-items: start;
+  }
+  .family-detail[data-wide-content="true"] .family-detail-head { grid-area: heading; }
+  .family-detail[data-wide-content="true"] .family-detail-people { grid-area: people; }
+  .family-detail[data-wide-content="true"] .family-sync-notice { grid-area: notice; }
+  .family-detail[data-wide-content="true"] .family-wide-plan { grid-area: plan; min-width: 0; }
+  .family-detail[data-wide-content="true"] .family-wide-record { grid-area: record; min-width: 0; }
+  .family-detail[data-wide-content="true"] .family-content-photos { margin-top: 0; }
+}

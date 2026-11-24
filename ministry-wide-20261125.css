@@ -1,0 +1,74 @@
+.visits-wide-list { display: none; }
+
+@media (min-width: 1000px) {
+  .ministry {
+    max-width: 940px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(220px, 1fr);
+    column-gap: 38px;
+    align-items: start;
+  }
+  .ministry-head { grid-column: 1 / -1; }
+  .ministry-wide-calendar, .ministry-wide-summary { min-width: 0; }
+  .ministry-wide-summary { padding-top: 24px; }
+  .ministry-wide-summary .ministry-summary { margin-top: 13px; }
+}
+
+@media (min-width: 1200px) {
+  .visits-wide-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .visits-wide-list {
+    display: block;
+    position: sticky;
+    top: 20px;
+    max-height: calc(100dvh - 40px);
+    margin-top: 20px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    border: 1px solid #e0e8de;
+    border-radius: 12px;
+    background: #f8faf6;
+  }
+  .visits-wide-heading {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e0e8de;
+    background: #f8faf6;
+    color: #405c49;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .visits-wide-person {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+    min-height: 52px;
+    padding: 10px 18px;
+    border: 0;
+    background: transparent;
+    color: #496353;
+    text-align: left;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .visits-wide-person span { color: #718477; font-size: 12px; }
+  .visits-wide-person:hover { background: #eaf1e9; }
+  .visits-wide-person[aria-current="true"] {
+    background: #e2eee4;
+    color: #294b36;
+    box-shadow: inset 3px 0 #718f78;
+  }
+  .visits-wide-person:focus-visible { outline: 2px solid #648a70; outline-offset: -3px; }
+  .visits-wide-content { min-width: 0; }
+  .visits-wide-content .visits-page { width: 100%; }
+}

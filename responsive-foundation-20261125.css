@@ -1,0 +1,22 @@
+/* Keep the calendar aligned with the other centered workspaces. */
+@media (min-width: 651px) {
+  .ministry {
+    margin-inline: auto;
+  }
+}
+
+/* Give the persistent back button its own rail on wider screens, so it
+   cannot cover a control as the page scrolls. Keep the mobile layout intact. */
+@media (min-width: 700px) {
+  .use-study-floating-back main {
+    padding-inline: 96px;
+  }
+
+  .floating-back {
+    right: calc(max(18px, (100vw - 1144px) / 2 + 18px) + var(--study-visual-right, 0px));
+  }
+
+  .use-study-floating-back .ministry-background-saving {
+    right: calc(max(18px, (100vw - 1144px) / 2 + 18px) + var(--study-visual-right, 0px));
+  }
+}

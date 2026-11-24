@@ -1,0 +1,69 @@
+.personal-note-editor .research-writing-column,
+.personal-note-editor .research-materials-column,
+.personal-note-editor .research-form-tail {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+}
+.personal-note-editor .research-form-tail:empty { display: none; }
+
+@media (min-width: 601px) {
+  #edit-dialog.personal-note-editor {
+    width: min(650px, calc(100vw - 48px));
+    height: min(860px, calc(100dvh - 48px));
+    max-height: calc(100dvh - 48px);
+    overflow: hidden;
+    background: #f8f9f4;
+  }
+  #edit-dialog.personal-note-editor .dialog-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    padding: 26px 28px 0;
+  }
+  #edit-dialog.personal-note-editor .dialog-top { flex: none; }
+  #edit-dialog.personal-note-editor #note-form {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    gap: 0;
+    margin-top: 18px;
+    padding: 0;
+  }
+  #edit-dialog.personal-note-editor .research-form-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 20px;
+    padding: 0 2px 24px;
+  }
+  #edit-dialog.personal-note-editor #note-form .form-actions {
+    position: static;
+    flex: none;
+    margin: 0;
+    padding: 12px 2px max(16px, env(safe-area-inset-bottom));
+    background: #f8f9f4;
+    box-shadow: 0 -2px 8px #263d2a0a;
+  }
+  #edit-dialog.personal-note-editor .research-form-content input,
+  #edit-dialog.personal-note-editor .research-form-content textarea,
+  #edit-dialog.personal-note-editor .research-form-content .ql-editor { scroll-margin-block: 24px; }
+}
+
+@media (min-width: 1000px) {
+  #edit-dialog.personal-note-editor { width: min(980px, calc(100vw - 64px)); }
+  #edit-dialog.personal-note-editor .dialog-inner { padding-inline: 32px; }
+  #edit-dialog.personal-note-editor .research-form-content {
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 1fr);
+    column-gap: 32px;
+    align-items: start;
+  }
+  .personal-note-editor .research-form-tail { grid-column: 1 / -1; }
+  .personal-note-editor .research-editor .ql-editor { min-height: min(40dvh, 340px); }
+  .personal-note-editor #note-body:not([hidden]) { min-height: min(40dvh, 340px); }
+  .personal-note-editor .research-materials-column { gap: 12px; }
+}

@@ -93,7 +93,7 @@ function loadGroup(imgs){
 async function fillImages(root=document){
  const imgs=[...root.querySelectorAll('img[data-path]')],lazy=root===app&&'IntersectionObserver' in window?imgs.filter(img=>img.loading==='lazy'):[];
  if(lazy.length){gridImageObserver?.disconnect();const observer=new IntersectionObserver(entries=>{const visible=[];for(const e of entries)if(e.isIntersecting){observer.unobserve(e.target);visible.push(e.target)}loadGroup(visible)},{rootMargin:'300px'});gridImageObserver=observer;lazy.forEach(img=>observer.observe(img))}
- await loadGroup(imgs.filter(img=>!lazy.includes(img)));
+ const lazySet=new Set(lazy);await loadGroup(imgs.filter(img=>!lazySet.has(img)));
 }
 async function loadPrivateNotes(){const data=[];for(let start=0;;start+=500){const result=await db.from('toolbox_private_notes').select('item_id,description,reference_url,legacy_summary,slide_notes').order('item_id').range(start,start+499);if(result.error)return result;data.push(...result.data);if(result.data.length<500)return {data}}}
 async function refresh(){let query=db.from('toolbox_items').select('*');if(!managing)query=query.eq('published',true);const [list,ordering,notes]=await Promise.all([query.order('sort_order').order('created_at'),db.from('toolbox_category_order').select('tags,age_tags,updated_at').eq('id',true).maybeSingle(),managing&&admin?loadPrivateNotes():Promise.resolve({data:[]})]);if(list.error)throw list.error;if(notes.error)throw notes.error;const byId=new Map((notes.data||[]).map(n=>[n.item_id,n]));items=(list.data||[]).map(record=>{const n=byId.get(record.id);return n?{...record,description:n.description,reference_url:n.reference_url,summary:n.legacy_summary,slide_notes:n.slide_notes||{}}:record});categoryOrderRecord=ordering.error?null:ordering.data;ageTags=categoryOrderRecord?.age_tags??defaultAgeTags;scheduleThumbnailBackfill()}
@@ -104,8 +104,8 @@ const splitCategories=tags=>[...new Set((tags||[]).flatMap(t=>t==='창조와 자
 function categories(){
  const used=new Set(items.filter(x=>x.published||admin).flatMap(x=>splitCategories(x.tags)));
  if(used.has('모든 연령'))ageTags.forEach(t=>used.add(t));used.delete('모든 연령');
- const order=[...new Set([...splitCategories(categoryOrderRecord?.tags??defaultCategories)])];
- return [...used].sort((a,b)=>{let x=order.indexOf(a),y=order.indexOf(b);return (x<0?999:x)-(y<0?999:y)||a.localeCompare(b,'ko')});
+ const order=[...new Set([...splitCategories(categoryOrderRecord?.tags??defaultCategories)])],orderIndex=new Map(order.map((tag,index)=>[tag,index]));
+ return [...used].sort((a,b)=>(orderIndex.get(a)??999)-(orderIndex.get(b)??999)||a.localeCompare(b,'ko'));
 }
 function listRoute(){
  const hash=location.hash;
@@ -176,12 +176,12 @@ function renderList(){
  if(ageTags.includes(filter))shown.sort((a,b)=>Number(!(a.tags||[]).includes(filter))-Number(!(b.tags||[]).includes(filter)));
  const heading=favoritesOnly?'즐겨찾기':filter;
  app.innerHTML=`<div class="collection-head"><h1>${esc(heading)}</h1><div class="collection-actions"></div></div><section class="grid" aria-label="자료">${shown.map(x=>`<a class="tile" href="#/${x.id}" data-item="${x.id}"><div class="tile-visual">${x.cover||x.images?.[0]?`<img data-path="${esc(x.cover_thumbnail||x.cover||x.images[0])}" ${x.cover_thumbnail?`data-original-path="${esc(x.cover||x.images[0])}"`:''} data-fallback="${esc(x.title)}" alt="" loading="lazy">`:'<div class="placeholder"></div>'}<span class="tile-title">${esc(x.title)}</span>${!x.published?'<small class="draft-badge">비공개</small>':''}</div></a>`).join('')}</section>${!shown.length?`<div class="empty">${favoritesOnly?'즐겨찾기 없음':'자료 없음'}${favoritesOnly||filter!=='전체'?'<a class="empty-reset" href="#/all">전체 보기</a>':''}</div>`:''}${floatingBack('#/','분류로 돌아가기')}`;
- fillImages(app);fitTileTitles(app);const tileNodes=[...app.querySelectorAll('[data-item]')];tileNodes.slice(0,2).forEach((tile,i)=>{const item=shown[i],firstImage=item?.images?.[0],thumbnail=tile.querySelector('img[data-path]');if(!firstImage||!thumbnail||thumbnail.dataset.path===firstImage)return;const warm=()=>{if(thumbnail.isConnected&&thumbnail.naturalWidth>0)warmTileItem(item)};if(thumbnail.complete&&thumbnail.naturalWidth>0)warm();else thumbnail.addEventListener('load',warm,{once:true})});tileNodes.forEach(a=>{const selected=shown.find(item=>item.id===a.dataset.item);a.addEventListener('pointerdown',()=>warmTileItem(selected),{passive:true});a.addEventListener('focus',()=>warmTileItem(selected));});app.querySelectorAll('[data-item]').forEach(a=>a.onclick=e=>{const img=a.querySelector('img[data-path]');if(img?.parentElement?.classList.contains('image-failed')){e.preventDefault();urlCache.delete(img.dataset.path);loadImage(img);return}savedScroll=window.scrollY;if(!admin&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey&&e.button===0){const selectedItem=shown.find(item=>item.id===a.dataset.item);if(selectedItem?.images?.length){e.preventDefault();showViewer(selectedItem,0)}}});
+ fillImages(app);fitTileTitles(app);const tileNodes=[...app.querySelectorAll('[data-item]')],shownById=new Map(shown.map(item=>[item.id,item]));tileNodes.slice(0,2).forEach((tile,i)=>{const item=shown[i],firstImage=item?.images?.[0],thumbnail=tile.querySelector('img[data-path]');if(!firstImage||!thumbnail||thumbnail.dataset.path===firstImage)return;const warm=()=>{if(thumbnail.isConnected&&thumbnail.naturalWidth>0)warmTileItem(item)};if(thumbnail.complete&&thumbnail.naturalWidth>0)warm();else thumbnail.addEventListener('load',warm,{once:true})});tileNodes.forEach(a=>{const selected=shownById.get(a.dataset.item);a.addEventListener('pointerdown',()=>warmTileItem(selected),{passive:true});a.addEventListener('focus',()=>warmTileItem(selected));a.onclick=e=>{const img=a.querySelector('img[data-path]');if(img?.parentElement?.classList.contains('image-failed')){e.preventDefault();urlCache.delete(img.dataset.path);loadImage(img);return}savedScroll=window.scrollY;if(!admin&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey&&e.button===0&&selected?.images?.length){e.preventDefault();showViewer(selected,0)}}});
 }
 
 function fitTileTitles(root){
  const tiles=[...root.querySelectorAll('.tile')];
- function fit(){if(!root.isConnected)return;for(const tile of tiles){tile.classList.remove('tile-title-below');const title=tile.querySelector('.tile-title'),visual=tile.querySelector('img,.placeholder');if(title&&visual&&title.scrollHeight>visual.clientHeight*.55)tile.classList.add('tile-title-below')}}
+ function fit(){if(!root.isConnected)return;tiles.forEach(tile=>tile.classList.remove('tile-title-below'));const below=tiles.filter(tile=>{const title=tile.querySelector('.tile-title'),visual=tile.querySelector('img,.placeholder');return title&&visual&&title.scrollHeight>visual.clientHeight*.55});below.forEach(tile=>tile.classList.add('tile-title-below'))}
  requestAnimationFrame(fit);document.fonts?.ready.then(fit);
 }
 function showMenu(item=null){

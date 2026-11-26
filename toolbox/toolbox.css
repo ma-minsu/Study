@@ -105,6 +105,12 @@ photo-edit.dragging{opacity:.5}.photo-edit.drop-target .photo-preview{outline:3p
 
 /* Keep photo position aligned with the navigation controls. */
 .viewer{grid-template-rows:60px minmax(0,1fr) calc(68px + env(safe-area-inset-bottom,0px))}.viewer-head{justify-content:flex-end}.viewer-foot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 14px env(safe-area-inset-bottom,0px)}.viewer-foot [data-action=left]{justify-self:start}.viewer-foot [data-action=right]{justify-self:end}.viewer-foot .viewer-count{justify-self:center}
+.viewer-shared{grid-template-rows:0 minmax(0,1fr) calc(68px + env(safe-area-inset-bottom,0px))}
+.viewer-shared .viewer-image{grid-row:2}
+.viewer-shared .viewer-foot{grid-row:3}
+.viewer-shared.single-photo{grid-template-rows:0 minmax(0,1fr) 0}
+.viewer-shared.single-photo .viewer-orientation{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.toolbox-image-loader:empty::after{content:"";display:block;width:36px;height:36px;margin:17px auto;border:2px solid #ffffff45;border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
 
 /* Match collection and detail headers, and let photos keep their own proportions. */
 .collection-head,.detail-head{min-height:61px;border-bottom-color:#e9eee7}.collection-actions{min-height:48px}

@@ -34,7 +34,7 @@ if(!sharedAlbum&&managementLink){
  if(legacyAlbum)pageURL.hash='/item/'+legacyAlbum.id;
  history.replaceState(history.state,'',pageURL.href);
 }
-const icons={star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9z"/>',plus:'<path d="M12 4v16M4 12h16"/>',edit:'<path d="M12 20h9M16.5 3.5l4 4L8 20H4v-4z"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',left:'<path d="m15 18-6-6 6-6"/>',right:'<path d="m9 18 6-6-6-6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',share:'<path d="M12 16V3m-5 5 5-5 5 5M5 14v6h14v-6"/>',trash:'<path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13"/>',rotate:'<rect x="8" y="3" width="8" height="13" rx="1.5" transform="rotate(35 12 9.5)"/><path d="M4 16a9 9 0 0 0 15 2M19 21v-4h-4"/>'};
+const icons={download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9z"/>',plus:'<path d="M12 4v16M4 12h16"/>',edit:'<path d="M12 20h9M16.5 3.5l4 4L8 20H4v-4z"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',left:'<path d="m15 18-6-6 6-6"/>',right:'<path d="m9 18 6-6-6-6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',share:'<path d="M12 16V3m-5 5 5-5 5 5M5 14v6h14v-6"/>',trash:'<path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13"/>',rotate:'<rect x="8" y="3" width="8" height="13" rx="1.5" transform="rotate(35 12 9.5)"/><path d="M4 16a9 9 0 0 0 15 2M19 21v-4h-4"/>'};
 const icon=(name,label,extra='')=>`<button type="button" class="icon ${extra}" aria-label="${esc(label)}" title="${esc(label)}" data-action="${name}"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]||icons.close}</svg></button>`;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let items=[],admin=false,session=null,filter='전체',favoritesOnly=false,categoryOrderRecord=null,savedScroll=0,viewerIndex=0,viewerItem=null,viewerHidden=false,startTouch=null;
@@ -228,6 +228,12 @@ function showMenu(item=null){
  dialog.querySelector('[data-menu="logout"]')?.addEventListener('click',()=>exitManagement(true));
 }
 const backupMaxBytes=64*1024*1024;
+function downloadBlob(blob,filename,host=document.body){
+ const url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download=filename;link.hidden=true;
+ host.append(link);link.click();link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
 function blobDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('사진을 읽지 못했어요.'));reader.readAsDataURL(blob)})}
 async function toolboxBackupData(){
  if(!admin||!managing)throw Error('관리자 로그인이 필요해요.');
@@ -239,7 +245,7 @@ async function toolboxBackupData(){
 }
 async function downloadToolboxBackup(button){
  if(button.disabled)return;button.disabled=true;button.setAttribute('aria-busy','true');
- try{const data=await toolboxBackupData(),blob=new Blob([JSON.stringify(data)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='봉사도구함-백업-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);notify('백업을 내려받았어요')}
+ try{const data=await toolboxBackupData();downloadBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),'봉사도구함-백업-'+new Date().toISOString().slice(0,10)+'.json');notify('백업을 내려받았어요')}
  catch(err){notify(err.message||'백업하지 못했어요.')}finally{button.disabled=false;button.removeAttribute('aria-busy')}
 }
 function chooseToolboxBackup(){
@@ -305,7 +311,25 @@ async function openSharedAlbum({id,index}){
  app.replaceChildren();
  showViewer(item,index,{shared:true});
 }
-let activeShareDialog=null,qrLoader=null,kakaoLoader=null;
+let activeViewerDialog=null,qrLoader=null,kakaoLoader=null;
+function showViewerDialog(sheet,host){
+ if(activeViewerDialog)return false;
+ const previous=document.activeElement,token=crypto.randomUUID();
+ activeViewerDialog=sheet;
+ host.append(sheet);sheet.showModal();
+ try{history.pushState({...history.state,toolboxViewerDialog:token},'',location.href)}catch{}
+ function closeOnBack(event){if(event.state?.toolboxViewerDialog!==token&&sheet.open)sheet.close()}
+ window.addEventListener('popstate',closeOnBack);
+ sheet.addEventListener('close',()=>{
+  window.removeEventListener('popstate',closeOnBack);
+  if(history.state?.toolboxViewerDialog===token)history.back();
+  activeViewerDialog=null;sheet.remove();
+  if(previous?.isConnected)previous.focus({preventScroll:true});
+ },{once:true});
+ sheet.addEventListener('click',event=>{if(event.target===sheet)sheet.close()});
+ sheet.querySelector('.share-close').onclick=()=>sheet.close();
+ return true;
+}
 const KAKAO_JAVASCRIPT_KEY='dc2fac74e4bcb9c4226b10b6fa6f9a5c';
 function loadKakaoShare(){
  if(kakaoLoader)return kakaoLoader;
@@ -331,16 +355,67 @@ async function copyShareUrl(url){
  if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(url);return true}catch{}}
  const input=document.createElement('textarea');input.value=url;input.setAttribute('readonly','');input.style.cssText='position:fixed;left:-9999px;top:0';document.body.append(input);input.select();let copied=false;try{copied=document.execCommand('copy')}catch{}input.remove();return copied;
 }
+async function downloadToolboxImage(path,signal){
+ const {data,error}=await db.storage.from('ministry-toolbox').download(path,{},{signal});
+ if(error||!data?.size)throw Error('이미지를 불러오지 못했어요.');
+ return data;
+}
+function chooseToolboxDownload(item,index,host){
+ const sheet=document.createElement('dialog');
+ sheet.className='toolbox-download-dialog';
+ sheet.setAttribute('aria-labelledby','toolbox-download-title');
+ sheet.innerHTML=`<div class="share-sheet"><header class="share-sheet-head"><h2 id="toolbox-download-title">이미지 저장</h2><button type="button" class="share-close" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true">${icons.close}</svg></button></header><div class="download-options"><button type="button" class="secondary">이 이미지만 저장</button><button type="button" class="secondary" data-download-all>전체 이미지 저장</button></div><p class="share-feedback" role="status"></p></div>`;
+ if(!showViewerDialog(sheet,host))return;
+ const buttons=[...sheet.querySelectorAll('.download-options button')],feedback=sheet.querySelector('[role=status]');
+ const title=Array.from(item.title.replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g,'-').trim()).slice(0,55).join('')||'이미지';
+ const digits=Math.max(2,String(item.images.length).length);
+ let controller=null;
+ sheet.addEventListener('close',()=>controller?.abort(),{once:true});
+ async function imageFile(position,signal){
+  const path=item.images[position],input=await downloadToolboxImage(path,signal);
+  const extension=path.match(/\.[a-z\d]{1,8}$/i)?.[0].toLowerCase()
+   ||({'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif'})[input.type]||'';
+  const name=`${title}-${String(position+1).padStart(digits,'0')}${extension}`;
+  return {name,input};
+ }
+ async function* imageFiles(signal){
+  for(let position=0;position<item.images.length;position++){
+   if(signal.aborted||!sheet.open)return;
+   feedback.textContent=`이미지 준비 중 (${position+1}/${item.images.length})`;
+   yield await imageFile(position,signal);
+  }
+ }
+ for(const button of buttons)button.onclick=async()=>{
+  if(controller)return;
+  controller=new AbortController();
+  const {signal}=controller;
+  buttons.forEach(option=>{option.disabled=true});
+  feedback.textContent='이미지를 준비하는 중이에요.';
+  try{
+   let file;
+   if(button.hasAttribute('data-download-all')){
+    const {downloadZip}=await import('../vendor/client-zip/client-zip-2.5.0.js');
+    file={input:await downloadZip(imageFiles(signal)).blob(),name:`${title}-전체 이미지.zip`};
+   }else{
+    file=await imageFile(index,signal);
+   }
+   if(sheet.open&&!signal.aborted){
+    downloadBlob(file.input,file.name,sheet);
+    feedback.textContent='다운로드를 시작했어요.';
+   }
+  }catch{
+   if(sheet.open&&!signal.aborted)feedback.textContent='이미지를 저장하지 못했어요. 다시 시도해 주세요.';
+  }finally{
+   controller=null;
+   buttons.forEach(option=>{option.disabled=false});
+  }
+ };
+}
 function shareToolboxItem(item,index=0,host=document.body){
  if(item.published===false){notify('공개된 자료를 공유할 수 있어요');return}
- const url=toolboxShareUrl(item.id,index),previous=document.activeElement;
- if(activeShareDialog?.open)activeShareDialog.close();activeShareDialog?.remove();
- const sheet=document.createElement('dialog');activeShareDialog=sheet;sheet.className='toolbox-share-dialog';sheet.setAttribute('aria-labelledby','toolbox-share-title');sheet.innerHTML=`<div class="share-sheet"><header class="share-sheet-head"><h2 id="toolbox-share-title">공유</h2><button type="button" class="share-close" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header><div class="share-qr-wrap"><div class="share-qr" role="img" aria-label="사진을 여는 QR 코드"><canvas></canvas><span class="share-qr-status">QR 코드 준비 중</span></div></div><div class="share-actions"><button type="button" class="share-action share-copy" aria-label="링크 복사" title="링크 복사"><span class="share-action-icon share-copy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 15 6-6"/><path d="m11 6.5 1.4-1.4a4.6 4.6 0 0 1 6.5 6.5L17.5 13"/><path d="m13 17.5-1.4 1.4a4.6 4.6 0 0 1-6.5-6.5L6.5 11"/></svg></span></button><button type="button" class="share-action share-kakao" aria-label="카카오톡" title="카카오톡"><span class="share-action-icon share-kakao-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 9C12.95 9 4 15.8 4 24.2c0 5.33 3.61 10.02 9.06 12.73l-1.7 6.1c-.15.52.45.94.9.64l7.22-4.8c1.45.25 2.97.38 4.52.38 11.05 0 20-6.8 20-15.05S35.05 9 24 9Z"/><text x="24" y="28.3" text-anchor="middle">TALK</text></svg></span></button></div><p class="share-feedback" role="status" aria-live="polite"></p><input class="share-url-fallback" aria-label="공유 주소" readonly hidden></div>`;
- host.append(sheet);sheet.showModal();
- const shareToken=crypto.randomUUID();let shareHistory=false;try{history.pushState({...history.state,toolboxShare:shareToken},'',location.href);shareHistory=true}catch{}
- function shareBack(event){if(event.state?.toolboxShare!==shareToken&&sheet.open)sheet.close()}
- window.addEventListener('popstate',shareBack);
- sheet.addEventListener('close',()=>{window.removeEventListener('popstate',shareBack);if(shareHistory&&history.state?.toolboxShare===shareToken)history.back();if(activeShareDialog===sheet)activeShareDialog=null;sheet.remove();if(previous?.isConnected)previous.focus({preventScroll:true})},{once:true});sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.close()});sheet.querySelector('.share-close').onclick=()=>sheet.close();
+ const url=toolboxShareUrl(item.id,index);
+ const sheet=document.createElement('dialog');sheet.className='toolbox-share-dialog';sheet.setAttribute('aria-labelledby','toolbox-share-title');sheet.innerHTML=`<div class="share-sheet"><header class="share-sheet-head"><h2 id="toolbox-share-title">공유</h2><button type="button" class="share-close" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header><div class="share-qr-wrap"><div class="share-qr" role="img" aria-label="사진을 여는 QR 코드"><canvas></canvas><span class="share-qr-status">QR 코드 준비 중</span></div></div><div class="share-actions"><button type="button" class="share-action share-copy" aria-label="링크 복사" title="링크 복사"><span class="share-action-icon share-copy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 15 6-6"/><path d="m11 6.5 1.4-1.4a4.6 4.6 0 0 1 6.5 6.5L17.5 13"/><path d="m13 17.5-1.4 1.4a4.6 4.6 0 0 1-6.5-6.5L6.5 11"/></svg></span></button><button type="button" class="share-action share-kakao" aria-label="카카오톡" title="카카오톡"><span class="share-action-icon share-kakao-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 9C12.95 9 4 15.8 4 24.2c0 5.33 3.61 10.02 9.06 12.73l-1.7 6.1c-.15.52.45.94.9.64l7.22-4.8c1.45.25 2.97.38 4.52.38 11.05 0 20-6.8 20-15.05S35.05 9 24 9Z"/><text x="24" y="28.3" text-anchor="middle">TALK</text></svg></span></button></div><p class="share-feedback" role="status" aria-live="polite"></p><input class="share-url-fallback" aria-label="공유 주소" readonly hidden></div>`;
+ if(!showViewerDialog(sheet,host))return;
  const feedback=sheet.querySelector('.share-feedback');function showUrl(){const field=sheet.querySelector('.share-url-fallback');field.value=url;field.hidden=false;field.focus();field.select()}
  sheet.querySelector('.share-copy').onclick=async()=>{if(await copyShareUrl(url))feedback.textContent='링크를 복사했어요';else{feedback.textContent='주소를 길게 눌러 복사해 주세요';showUrl()}};
  const kakaoButton=sheet.querySelector('.share-kakao');let kakaoShare=null,kakaoImage='',sdkUnavailable=false;
@@ -545,7 +620,7 @@ function showViewer(item,index,{returnToHub=false,shared=false}={}){
   document.addEventListener('fullscreenchange',onFullscreenChange);
  }
  host.className='viewer-fullscreen-host';host.append(el);(shared?app:document.body).append(host);document.body.style.overflow='hidden';
- function cleanup(){if(closed)return;closed=true;landscapeMode=false;stopFullscreenGuard();exitViewerFullscreen();lastViewed.set(item.id,viewerIndex);host.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',onFullscreenChange);window.removeEventListener('popstate',onHistory);if(returnToHub&&itemId()===item.id){history.replaceState(history.state,'',location.pathname+location.search+'#/');render()}else if(starsChanged&&listRoute())renderList();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
+ function cleanup(){if(closed)return;closed=true;landscapeMode=false;stopFullscreenGuard();exitViewerFullscreen();lastViewed.set(item.id,viewerIndex);if(activeViewerDialog?.open&&host.contains(activeViewerDialog))activeViewerDialog.close();host.remove();document.body.style.overflow='';document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',onFullscreenChange);window.removeEventListener('popstate',onHistory);if(returnToHub&&itemId()===item.id){history.replaceState(history.state,'',location.pathname+location.search+'#/');render()}else if(starsChanged&&listRoute())renderList();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});scheduleThumbnailBackfill()}
  function close(){if(viewerHistory&&history.state?.toolboxViewer===token){history.back()}else cleanup()}
  function onHistory(e){if(e.state?.toolboxViewer!==token)cleanup()}
  function exitViewerFullscreen(){if(fullscreenOwned){fullscreenOwned=false;if(document.fullscreenElement===host){try{Promise.resolve(document.exitFullscreen()).catch(()=>{})}catch{}}}}
@@ -565,7 +640,7 @@ function showViewer(item,index,{returnToHub=false,shared=false}={}){
  function draw(){
   if(!shared)lastViewed.set(item.id,viewerIndex);
   el.classList.toggle('hidden-ui',viewerHidden);
-  const head=shared?'':`<div class="viewer-head"><div class="viewer-head-actions">${icon('star',stars.includes(item.id)?'즐겨찾기 해제':'즐겨찾기',stars.includes(item.id)?'active':'')}${icon('share','공유')}</div>${icon('close','닫기')}</div>`;
+  const head=`<div class="viewer-head"><div class="viewer-head-actions">${shared?'':`${icon('star',stars.includes(item.id)?'즐겨찾기 해제':'즐겨찾기',stars.includes(item.id)?'active':'')}${icon('share','공유')}`}${icon('download','이미지 저장')}</div>${shared?'':icon('close','닫기')}</div>`;
   const navigation=multiple?`${icon('left','이전 사진')}<span class="viewer-count" aria-label="${viewerIndex+1} / ${item.images.length}번째 사진">${viewerIndex+1} / ${item.images.length}</span>${icon('right','다음 사진')}`:'';
   const foot=shared&&!multiple?'':`<div class="viewer-foot">${navigation}</div>`;
   el.innerHTML=`${head}<div class="viewer-image"><img data-path="${esc(item.images[viewerIndex])}" data-fallback="사진을 불러오지 못했어요" alt="${esc(item.title)} ${viewerIndex+1}"><button type="button" class="viewer-retry" hidden>다시 시도</button></div>${foot}${item.landscape_enabled?icon('rotate','가로 보기','viewer-orientation'):''}`;
@@ -577,13 +652,16 @@ function showViewer(item,index,{returnToHub=false,shared=false}={}){
    el.querySelector('[data-action=star]').onclick=()=>{stars=stars.includes(item.id)?stars.filter(id=>id!==item.id):[...stars,item.id];starSave();starsChanged=true;const button=el.querySelector('[data-action=star]'),active=stars.includes(item.id);button.classList.toggle('active',active);button.setAttribute('aria-label',active?'즐겨찾기 해제':'즐겨찾기');button.title=active?'즐겨찾기 해제':'즐겨찾기'};
    el.querySelector('[data-action=share]').onclick=()=>shareToolboxItem(item,viewerIndex,host);
   }
+  const download=el.querySelector('[data-action=download]');
+  download.setAttribute('aria-haspopup','dialog');
+  download.onclick=()=>chooseToolboxDownload(item,viewerIndex,host);
   el.querySelector('[data-action=rotate]')?.addEventListener('click',toggleLandscape);updateOrientationButton();
   const previous=el.querySelector('[data-action=left]'),next=el.querySelector('[data-action=right]');if(previous&&next){previous.disabled=viewerIndex===0;next.disabled=viewerIndex===item.images.length-1;previous.onclick=()=>{if(viewerIndex>0){viewerIndex--;draw()}};next.onclick=()=>{if(viewerIndex<item.images.length-1){viewerIndex++;draw()}}}
   const area=el.querySelector('.viewer-image');area.onclick=()=>{if(Date.now()<suppressClickUntil)return;viewerHidden=!viewerHidden;el.classList.toggle('hidden-ui',viewerHidden)};
   area.ontouchstart=e=>{startTouch=e.touches.length===1&&(!window.visualViewport||window.visualViewport.scale<=1.05)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null};
   area.ontouchend=e=>{if(!startTouch||e.changedTouches.length!==1||e.touches.length)return;const rawX=e.changedTouches[0].clientX-startTouch.x,rawY=e.changedTouches[0].clientY-startTouch.y,rotated=getComputedStyle(el).getPropertyValue('--manual-landscape').trim()==='1';let dx=rotated?rawY:rawX,dy=rotated?-rawX:rawY;startTouch=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){suppressClickUntil=Date.now()+400;const target=Math.max(0,Math.min(item.images.length-1,viewerIndex+(dx<0?1:-1)));if(target!==viewerIndex){viewerIndex=target;draw()}}};
  }
- function key(e){if(modal.open||activeShareDialog?.open)return;if(!shared&&e.key==='Escape'){e.preventDefault();close()}if(e.key==='ArrowRight'&&viewerIndex<item.images.length-1){viewerIndex++;draw()}if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;draw()}}
+ function key(e){if(modal.open||activeViewerDialog?.open)return;if(!shared&&e.key==='Escape'){e.preventDefault();close()}if(e.key==='ArrowRight'&&viewerIndex<item.images.length-1){viewerIndex++;draw()}if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;draw()}}
  document.addEventListener('keydown',key);draw();
  (shared?el:el.querySelector('[data-action=close]')).focus({preventScroll:true});
  if(!shared)enterViewerFullscreen();

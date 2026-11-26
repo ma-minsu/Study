@@ -228,11 +228,19 @@ function showMenu(item=null){
  dialog.querySelector('[data-menu="logout"]')?.addEventListener('click',()=>exitManagement(true));
 }
 const backupMaxBytes=64*1024*1024;
-function downloadBlob(blob,filename,host=document.body){
- const url=URL.createObjectURL(blob),link=document.createElement('a');
- link.href=url;link.download=filename;link.hidden=true;
- host.append(link);link.click();link.remove();
+function blobDownloadLink(blob,filename){
+ const link=document.createElement('a');
+ link.href=URL.createObjectURL(blob);link.download=filename;
+ return link;
+}
+function releaseDownloadLink(link){
+ const url=link.href;
  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+function downloadBlob(blob,filename,host=document.body){
+ const link=blobDownloadLink(blob,filename);
+ link.hidden=true;host.append(link);link.click();link.remove();
+ releaseDownloadLink(link);
 }
 function blobDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('사진을 읽지 못했어요.'));reader.readAsDataURL(blob)})}
 async function toolboxBackupData(){
@@ -364,13 +372,22 @@ function chooseToolboxDownload(item,index,host){
  const sheet=document.createElement('dialog');
  sheet.className='toolbox-download-dialog';
  sheet.setAttribute('aria-labelledby','toolbox-download-title');
- sheet.innerHTML=`<div class="share-sheet"><header class="share-sheet-head"><h2 id="toolbox-download-title">이미지 저장</h2><button type="button" class="share-close" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true">${icons.close}</svg></button></header><div class="download-options"><button type="button" class="secondary">이 이미지만 저장</button><button type="button" class="secondary" data-download-all>전체 이미지 저장</button></div><p class="share-feedback" role="status"></p></div>`;
+ sheet.innerHTML=`<div class="share-sheet">
+  <header class="share-sheet-head"><h2 id="toolbox-download-title">이미지 저장</h2><button type="button" class="share-close" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true">${icons.close}</svg></button></header>
+  <div class="download-options"><button type="button" class="secondary">이 이미지만 저장</button><button type="button" class="secondary" data-download-all>전체 이미지 저장</button></div>
+  <p class="share-feedback" role="status"></p>
+  <details class="download-files" hidden><summary>이미지별로 저장</summary><div class="download-file-list"></div></details>
+ </div>`;
  if(!showViewerDialog(sheet,host))return;
  const buttons=[...sheet.querySelectorAll('.download-options button')],feedback=sheet.querySelector('[role=status]');
+ const filesPanel=sheet.querySelector('.download-files'),fileList=sheet.querySelector('.download-file-list'),links=[];
  const title=Array.from(item.title.replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g,'-').trim()).slice(0,55).join('')||'이미지';
  const digits=Math.max(2,String(item.images.length).length);
  let controller=null;
- sheet.addEventListener('close',()=>controller?.abort(),{once:true});
+ sheet.addEventListener('close',()=>{
+  controller?.abort();
+  links.forEach(releaseDownloadLink);
+ },{once:true});
  async function imageFile(position,signal){
   const path=item.images[position],input=await downloadToolboxImage(path,signal);
   const extension=path.match(/\.[a-z\d]{1,8}$/i)?.[0].toLowerCase()
@@ -378,12 +395,22 @@ function chooseToolboxDownload(item,index,host){
   const name=`${title}-${String(position+1).padStart(digits,'0')}${extension}`;
   return {name,input};
  }
- async function* imageFiles(signal){
+ async function prepareAllImages(signal){
+  if(links.length)return;
+  const files=[];
   for(let position=0;position<item.images.length;position++){
    if(signal.aborted||!sheet.open)return;
    feedback.textContent=`이미지 준비 중 (${position+1}/${item.images.length})`;
-   yield await imageFile(position,signal);
+   files.push(await imageFile(position,signal));
   }
+  if(signal.aborted||!sheet.open)return;
+  for(const {input,name} of files){
+   const link=blobDownloadLink(input,name);
+   link.textContent=name;
+   links.push(link);
+  }
+  fileList.append(...links);
+  filesPanel.hidden=false;
  }
  for(const button of buttons)button.onclick=async()=>{
   if(controller)return;
@@ -392,13 +419,15 @@ function chooseToolboxDownload(item,index,host){
   buttons.forEach(option=>{option.disabled=true});
   feedback.textContent='이미지를 준비하는 중이에요.';
   try{
-   let file;
-   if(button.hasAttribute('data-download-all')){
-    const {downloadZip}=await import('../vendor/client-zip/client-zip-2.5.0.js');
-    file={input:await downloadZip(imageFiles(signal)).blob(),name:`${title}-전체 이미지.zip`};
-   }else{
-    file=await imageFile(index,signal);
+   if(button.hasAttribute('data-download-all')&&item.images.length>1){
+    await prepareAllImages(signal);
+    if(sheet.open&&!signal.aborted){
+     links.forEach(link=>link.click());
+     feedback.textContent=`이미지 ${links.length}장의 다운로드를 요청했어요. 브라우저가 물으면 여러 파일 다운로드를 허용해 주세요.`;
+    }
+    return;
    }
+   const file=await imageFile(index,signal);
    if(sheet.open&&!signal.aborted){
     downloadBlob(file.input,file.name,sheet);
     feedback.textContent='다운로드를 시작했어요.';
